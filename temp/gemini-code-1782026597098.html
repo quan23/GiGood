@@ -1,0 +1,125 @@
+<!-- Khai báo cấu trúc font chữ đồng nhất (Khuyên dùng Inter cho toàn bộ hệ thống) -->
+<div class="min-h-screen bg-stone-50 font-sans text-stone-800 antialiased">
+  
+  <!-- HEADER: Tối giản, thanh lịch, giảm nhiễu thị giác -->
+  <header class="sticky top-0 z-50 border-b border-stone-200 bg-white/90 backdrop-blur-md">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+      
+      <!-- LOGO & BRAND -->
+      <div class="flex items-center space-x-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600 text-white shadow-sm">
+          <i class="fa-solid fa-g"></i>
+        </div>
+        <div>
+          <span class="text-xl font-bold tracking-tight text-stone-900">GiGood</span>
+          <span class="ml-2 hidden rounded-md bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600 md:inline-block">Dự án</span>
+        </div>
+      </div>
+
+      <!-- NAVIGATION: Gọn gàng, không lạm dụng icon -->
+      <nav class="hidden space-x-1 md:flex">
+        <a href="#" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-50">Tìm việc vặt</a>
+        <a href="#" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50 hover:text-stone-900">Đăng việc</a>
+        <a href="#" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50 hover:text-stone-900">Trợ giúp</a>
+      </nav>
+
+      <!-- USER PROFILE: Thanh lịch, gom cụm thông tin tinh tế -->
+      <div class="flex items-center space-x-4">
+        <!-- Ví ký quỹ: Thay màu Teal gắt bằng màu dịu nhẹ, đổ bóng mờ nhẹ -->
+        <div class="hidden items-center space-x-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 shadow-sm sm:flex">
+          <i class="fa-solid fa-wallet text-stone-500 text-sm"></i>
+          <span class="text-xs font-medium text-stone-500">Ví ký quỹ:</span>
+          <span class="text-sm font-semibold text-stone-900">2.500.000đ</span>
+        </div>
+
+        <!-- Người dùng -->
+        <div class="flex items-center space-x-3 border-l border-stone-200 pl-4">
+          <div class="text-right hidden sm:block">
+            <p class="text-sm font-semibold text-stone-900">Nguyễn Văn A</p>
+            <p class="text-xs text-stone-500">Thành viên Đồng</p>
+          </div>
+          <img class="h-9 w-9 rounded-xl object-cover ring-2 ring-stone-100 shadow-inner" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Avatar">
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT: Bố cục Grid thoáng đạt, loại bỏ border-2 thô cứng -->
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      
+      <!-- CỘT TRÁI: Khu vực thông tin / Form nhập liệu -->
+      <div class="space-y-6 lg:col-span-2">
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h2 class="text-lg font-bold text-stone-900 mb-4">Thông tin đăng việc mới</h2>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1.5">Tên công việc</label>
+              <input type="text" placeholder="Ví dụ: Dọn dẹp phòng trọ 30m2" class="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm shadow-sm transition placeholder:text-stone-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1.5">Ngân sách dự kiến</label>
+                <div class="relative rounded-xl shadow-sm">
+                  <input type="text" placeholder="500.000" class="w-full rounded-xl border border-stone-300 pl-4 pr-12 py-2.5 text-sm transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none">
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                    <span class="text-sm font-medium text-stone-400">VND</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1.5">Thời gian hoàn thành</label>
+                <input type="date" class="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm shadow-sm transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end space-x-3 border-t border-stone-100 pt-4">
+            <button class="rounded-xl px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50">Hủy bỏ</button>
+            <button class="rounded-xl bg-orange-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 active:scale-[0.98]">Đăng bài ngay</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CỘT PHẢI: Gợi ý / Thao tác nhanh (Thay border-2 bằng shadow-md mượt mà khi hover) -->
+      <div class="space-y-6">
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h3 class="text-sm font-bold tracking-wide text-stone-900 uppercase mb-4">Gợi ý việc vặt nhanh</h3>
+          
+          <div class="space-y-3">
+            <!-- Nút mẫu: Thay vì dùng viền cam dày gắt, dùng viền mảnh và hiệu ứng hover êm ái -->
+            <button class="group flex w-full items-center justify-between rounded-xl border border-stone-200 bg-stone-50/50 p-3.5 text-left transition duration-200 hover:border-orange-200 hover:bg-orange-50/30 hover:shadow-sm">
+              <div class="flex items-center space-x-3">
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-100 text-orange-600 group-hover:bg-orange-200 transition">
+                  <i class="fa-solid fa-truck-ramp-box text-sm"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-stone-900">Chuyển trọ gói nhỏ</p>
+                  <p class="text-xs text-stone-500">Giá sàn ước tính: ~300k</p>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-stone-400 group-hover:translate-x-0.5 transition-transform"></i>
+            </button>
+
+            <button class="group flex w-full items-center justify-between rounded-xl border border-stone-200 bg-stone-50/50 p-3.5 text-left transition duration-200 hover:border-orange-200 hover:bg-orange-50/30 hover:shadow-sm">
+              <div class="flex items-center space-x-3">
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-100 text-orange-600 group-hover:bg-orange-200 transition">
+                  <i class="fa-solid fa-broom text-sm"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-stone-900">Dọn dẹp theo giờ</p>
+                  <p class="text-xs text-stone-500">Giá sàn ước tính: ~60k/h</p>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-stone-400 group-hover:translate-x-0.5 transition-transform"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>

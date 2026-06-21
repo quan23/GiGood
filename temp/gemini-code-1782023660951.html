@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GiGood Mobile Demo</title>
+    <!-- Tailwind CSS để dựng giao diện nhanh -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons để làm icon app mobile -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Alpine.js để xử lý logic click, chuyển tab, nhảy số realtime không cần reload -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        /* Giả lập thanh cuộn ẩn tinh tế như trên điện thoại */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-stone-900 min-h-screen flex items-center justify-center font-sans antialiased p-4">
+
+    <!-- KHUNG GIẢ LẬP ĐIỆN THOẠI (MOBILE SMARTPHONE MOCKUP) -->
+    <div class="w-[375px] h-[812px] bg-stone-100 rounded-[48px] shadow-2xl border-[12px] border-stone-800 relative flex flex-col overflow-hidden select-none"
+         x-data="{
+            isLoggedIn: false,
+            activeTab: 'main', 
+            role: 'seeker', 
+            credits: 50000,
+            seekerSubTab: 'active',
+            taskerSubTab: 'market',
+            activeChatJobId: null,
+            chatInput: '',
+            
+            // State Form Đăng Ký
+            customName: '',
+            customRole: 'seeker',
+
+            // State Form Đăng Việc
+            jobTitle: '',
+            jobBudget: '',
+            jobLocation: '',
+            jobDesc: '',
+
+            // State Modal Đánh giá
+            isRatingModal: false,
+            selectedJobId: null,
+            ratingScore: '5',
+
+            // Dữ liệu mẫu ban đầu
+            jobs: [
+                { id: 1, title: 'Cần bạn phụ chạy bàn quán cà phê ca tối', category: 'Phụ việc quán café', budget: 150000, location: 'Hải Châu, Đà Nẵng', desc: 'Dọn dẹp bàn ghế từ 18h - 22h tối nay.', status: 'finding', seekerName: 'Khánh Vy', taskerName: null, chats: [] },
+                { id: 2, title: 'Hỗ trợ setup bê vác đồ sự kiện tiệc cưới', category: 'Hỗ trợ sự kiện', budget: 250000, location: 'Sơn Trà, Đà Nẵng', desc: 'Setup phông nền ngoài trời.', status: 'finding', seekerName: 'Khánh Vy', taskerName: null, chats: [] }
+            ],
+
+            // Hàm xử lý nghiệp vụ nhanh
+            quickLogin(selectedRole) {
+                this.role = selectedRole;
+                this.customName = selectedRole === 'seeker' ? 'Khánh Vy' : 'Minh Quân';
+                this.isLoggedIn = true;
+            },
+            handleRegister() {
+                if(!this.customName.trim()) return alert('Vui lòng điền tên hiển thị');
+                this.role = this.customRole;
+                this.isLoggedIn = true;
+            },
+            createJob() {
+                if(!this.jobTitle || !this.jobBudget || !this.jobLocation) return alert('Vui lòng điền đủ thông tin bắt buộc');
+                this.jobs.unshift({
+                    id: Date.now(),
+                    title: this.jobTitle,
+                    category: 'Việc vặt tự do',
+                    budget: parseInt(this.jobBudget),
+                    location: this.jobLocation,
+                    desc: this.jobDesc || 'Không có mô tả',
+                    status: 'finding',
+                    seekerName: this.customName,
+                    taskerName: null,
+                    chats: []
+                });
+                this.jobTitle = ''; this.jobBudget = ''; this.jobLocation = ''; this.jobDesc = '';
+                alert('Đăng việc thành công! Tiền đã được chuyển vào két bảo chứng Escrow.');
+            },
+            acceptJob(jobId) {
+                if(this.credits < 10000) return alert('Ví không đủ 10.000đ để kết nối');
+                this.credits -= 10000;
+                let job = this.jobs.find(j => j.id === jobId);
+                job.status = 'assigned';
+                job.taskerName = this.customName;
+                job.chats.push({ sender: 'tasker', text: 'Chào anh/chị, em nhận đơn này nhé, em qua liền ạ!', time: 'Vừa xong' });
+                this.activeChatJobId = jobId;
+                this.activeTab = 'chat';
+                this.taskerSubTab = 'active';
+            },
+            reportComplete(jobId) {
+                let job = this.jobs.find(j => j.id === jobId);
+                job.status = 'reported';
+                job.chats.push({ sender: 'system', text: '🔔 HỆ THỐNG: Thợ báo đã làm xong. Chủ nhà vui lòng duyệt giải ngân.' });
+                alert('Đã gửi báo cáo hoàn thành vật lý lên hệ thống.');
+            },
+            openRating(jobId) {
+                this.selectedJobId = jobId;
+                this.isRatingModal = true;
+            },
+            confirmRelease() {
+                let job = this.jobs.find(j => j.id === this.selectedJobId);
+                job.status = 'completed';
+                this.isRatingModal = false;
+                alert('Duyệt thành công! Hệ thống đã giải ngân tiền từ két Escrow về ví của Thợ (khấu trừ 10% phí sàn).');
+            },
+            sendChat() {
+                if(!this.chatInput.trim()) return;
+                let job = this.jobs.find(j => j.id === this.activeChatJobId);
+                job.chats.push({ sender: this.role, text: this.chatInput });
+                let currentInput = this.chatInput;
+                this.chatInput = '';
+                
+                // Giả lập đối phương rep chat tự động sau 1s
+                setTimeout(() => {
+                    job.chats.push({ 
+                        sender: this.role === 'seeker' ? 'tasker' : 'seeker', 
+                        text: this.role === 'seeker' ? 'Dạ vâng ạ, em đang làm đúng tiến độ.' : 'Ok em, làm kỹ giúp anh nhé.' 
+                    });
+                }, 1000);
+            }
+         }"
+         x-init="$watch('isLoggedIn', () => $nextTick(() => lucide.createIcons())); $watch('activeTab', () => $nextTick(() => lucide.createIcons())); $watch('role', () => $nextTick(() => lucide.createIcons()));"
+    >
+
+        <!-- CAMERA TAI THỎ / LOA GIẢ LẬP (IPHONE NOTCH) -->
+        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-36 h-6 bg-stone-800 rounded-b-2xl z-50 flex items-center justify-center">
+            <div class="w-12 h-1 bg-stone-900 rounded-full mb-1"></div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- MÀN HÌNH CHƯA ĐĂNG NHẬP (AUTH ONBOARDING) -->
+        <!-- ========================================== -->
+        <div x-show="!isLoggedIn" class="flex-1 flex flex-col justify-between p-6 pt-12 bg-stone-50 overflow-y-auto no-scrollbar">
+            <div class="text-center mt-6">
+                <div class="w-16 h-16 bg-orange-600 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-orange-600/30">G</div>
+                <h1 class="text-2xl font-black text-stone-900 mt-4 tracking-tight">GiGood Mobile</h1>
+                <p class="text-xs text-stone-500 mt-1 px-4">Hệ sinh thái kết nối vi-việc làm tức thời & Bảo chứng Escrow</p>
+            </div>
+
+            <!-- Demo nhanh -->
+            <div class="space-y-3 my-6">
+                <p class="text-[10px] font-bold text-stone-400 tracking-wider text-center">BẤM VÀO ĐỂ DEMO NHANH VAI TRÒ</p>
+                <button @click="quickLogin('seeker')" class="w-full flex items-center p-3 bg-white border-2 border-orange-100 rounded-2xl shadow-sm hover:border-orange-500 transition text-left">
+                    <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold mr-3">S</div>
+                    <div>
+                        <h4 class="font-bold text-sm text-orange-600">Khánh Vy (Seeker)</h4>
+                        <p class="text-[11px] text-stone-500">Người thuê, có nhu cầu đăng việc vặt</p>
+                    </div>
+                </button>
+                <button @click="quickLogin('tasker')" class="w-full flex items-center p-3 bg-white border-2 border-teal-100 rounded-2xl shadow-sm hover:border-teal-500 transition text-left">
+                    <div class="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold mr-3">T</div>
+                    <div>
+                        <h4 class="font-bold text-sm text-teal-600">Minh Quân (Tasker)</h4>
+                        <p class="text-[11px] text-stone-500">Người lao động tự do, đi kiếm việc vặt gần bên</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Custom Form -->
+            <div class="border-t border-stone-200 pt-4 space-y-3">
+                <input type="text" x-model="customName" placeholder="Hoặc nhập tên tùy ý..." class="w-full px-3 py-2 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:border-stone-900">
+                <div class="grid grid-cols-2 gap-2 text-xs font-bold">
+                    <button @click="customRole = 'seeker'" :class="customRole === 'seeker' ? 'bg-orange-600 text-white' : 'bg-white text-stone-700 border'" class="py-2 rounded-xl">Làm Chủ</button>
+                    <button @click="customRole = 'tasker'" :class="customRole === 'tasker' ? 'bg-teal-700 text-white' : 'bg-white text-stone-700 border'" class="py-2 rounded-xl">Làm Thợ</button>
+                </div>
+                <button @click="handleRegister()" class="w-full py-2.5 bg-stone-900 text-white rounded-xl text-xs font-bold shadow-md">Kích Hoạt Ứng Dụng</button>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- MÀN HÌNH CHÍNH SAU KHI ĐĂNG NHẬP -->
+        <!-- ========================================== -->
+        <div x-show="isLoggedIn" class="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
+            
+            <!-- MOBILE HEADER -->
+            <div class="bg-white border-b border-stone-200 px-4 pt-8 pb-3 flex justify-between items-center shrink-0">
+                <div>
+                    <h2 class="text-sm font-black text-stone-900 tracking-tight">GiGood Sandbox</h2>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span :class="role === 'seeker' ? 'bg-orange-100 text-orange-600' : 'bg-teal-100 text-teal-700'" class="text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase" x-text="role === 'seeker' ? 'Chủ (Seeker)' : 'Thợ (Tasker)'"></span>
+                        <span class="text-[10px] font-bold text-orange-600" x-text="'Ví: ' + credits.toLocaleString() + 'đ'"></span>
+                    </div>
+                </div>
+                <!-- Nút đổi vai nhanh để test luồng -->
+                <button @click="role = (role === 'seeker' ? 'tasker' : 'seeker')" class="flex items-center gap-1 bg-stone-900 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg active:scale-95 transition">
+                    <i data-lucide="refresh-cw" class="w-2.5 h-2.5"></i> Đổi góc nhìn
+                </button>
+            </div>
+
+            <!-- MOBILE WORKSPACE CONTENT (VÙNG CUỘN ĐƯỢC) -->
+            <div x-show="activeTab === 'main'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+                
+                <!-- BANNER VÍ VÀ NẠP TIỀN GIẢ LẬP -->
+                <div class="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm">
+                    <p class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Số dư tài khoản mẫu</p>
+                    <h3 class="text-xl font-black text-stone-900 mt-0.5" x-text="credits.toLocaleString() + ' VND'"></h3>
+                    <div class="flex gap-2 mt-3">
+                        <button @click="credits += 100000" class="px-3 py-1.5 bg-orange-50 text-orange-600 text-[10px] font-bold rounded-lg border border-orange-100">+100K Token</button>
+                        <button @click="credits += 500000" class="px-3 py-1.5 bg-teal-50 text-teal-700 text-[10px] font-bold rounded-lg border border-teal-100">+500K Đăng Tin</button>
+                    </div>
+                </div>
+
+                <!-- ================= VAI TRÒ: SEEKER (NGƯỜI THUÊ) ================= -->
+                <template x-if="role === 'seeker'">
+                    <div class="space-y-4">
+                        <!-- Form Đăng Việc Mới -->
+                        <div class="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm space-y-2.5">
+                            <div class="flex items-center gap-1 text-orange-600 font-bold text-xs mb-1">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Đăng Việc Vặt Ký Quỹ Mới
+                            </div>
+                            <input type="text" x-model="jobTitle" placeholder="Tiêu đề (Ví dụ: Dọn kho bốc xếp 3 tiếng)" class="w-full px-3 py-1.5 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:border-orange-500">
+                            <input type="number" x-model="jobBudget" placeholder="Thù lao cam kết giải ngân (VND)" class="w-full px-3 py-1.5 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:border-orange-500">
+                            <input type="text" x-model="jobLocation" placeholder="Vị trí làm việc tại Đà Nẵng" class="w-full px-3 py-1.5 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:border-orange-500">
+                            <textarea x-model="jobDesc" placeholder="Mô tả thêm yêu cầu công việc..." class="w-full px-3 py-1.5 text-xs bg-stone-50 border border-stone-200 rounded-xl h-14 focus:outline-none focus:border-orange-500"></textarea>
+                            <button @click="createJob()" class="w-full py-2 bg-orange-600 text-white text-xs font-bold rounded-xl shadow-md shadow-orange-600/10 active:scale-[0.98] transition">Đăng & Ký Quỹ Escrow</button>
+                        </div>
+
+                        <!-- Bộ Quản Lý Đơn Của Seeker -->
+                        <div class="flex border-b border-stone-200 text-xs font-bold">
+                            <button @click="seekerSubTab = 'active'" :class="seekerSubTab === 'active' ? 'border-orange-600 text-orange-600 border-b-2' : 'text-stone-400'" class="flex-1 pb-2">Đang tìm/Đang làm</button>
+                            <button @click="seekerSubTab = 'history'" :class="seekerSubTab === 'history' ? 'border-orange-600 text-orange-600 border-b-2' : 'text-stone-400'" class="flex-1 pb-2">Đã Hoàn Thành</button>
+                        </div>
+
+                        <!-- Danh sách đơn hàng Seeker -->
+                        <div class="space-y-2.5">
+                            <template x-for="job in jobs.filter(j => seekerSubTab === 'active' ? j.status !== 'completed' : j.status === 'completed')" :key="job.id">
+                                <div class="bg-white p-3.5 rounded-xl border border-stone-200 shadow-sm relative">
+                                    <span class="text-[9px] font-bold bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded" x-text="job.category"></span>
+                                    <h4 class="font-bold text-xs text-stone-900 mt-1.5" x-text="job.title"></h4>
+                                    <p class="text-[10px] text-stone-500 mt-0.5 flex items-center gap-0.5"><i data-lucide="map-pin" class="w-3 h-3"></i> <span x-text="job.location"></span></p>
+                                    <div class="text-xs font-black text-orange-600 mt-2 flex justify-between items-center">
+                                        <span x-text="job.budget.toLocaleString() + 'đ'"></span>
+                                        
+                                        <!-- Nút hành động tương ứng với status -->
+                                        <template x-if="job.status === 'finding'">
+                                            <span class="text-[9px] text-stone-400 font-medium italic">⏳ Đang quét tìm thợ...</span>
+                                        </template>
+                                        <template x-if="job.status === 'assigned'">
+                                            <span class="text-[9px] text-amber-600 font-semibold">🕒 Thợ đang thi công...</span>
+                                        </template>
+                                        <template x-if="job.status === 'reported'">
+                                            <button @click="openRating(job.id)" class="px-2.5 py-1 bg-orange-600 text-white text-[10px] font-bold rounded-md">Phê Duyệt & Giải Ngân</button>
+                                        </template>
+                                        <template x-if="job.status === 'completed'">
+                                            <span class="text-[9px] text-green-600 font-bold">✓ Đã giải ngân thành công</span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ================= VAI TRÒ: TASKER (NGƯỜI THỢ) ================= -->
+                <template x-if="role === 'tasker'">
+                    <div class="space-y-4">
+                        <!-- Radar định vị GPS giả lập -->
+                        <div class="bg-stone-950 text-white p-3.5 rounded-2xl shadow-inner">
+                            <div class="flex items-center gap-1.5 text-teal-400 font-bold text-xs">
+                                <span class="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span> 🛰️ Radar GPS Bán Kính 2km
+                            </div>
+                            <p class="text-[10px] text-stone-400 mt-1 leading-normal">Tự động phát hiện các yêu cầu công việc nhỏ, nhanh, xung quanh vị trí của bạn tại Đà Nẵng.</p>
+                        </div>
+
+                        <!-- Bộ Tab Thợ -->
+                        <div class="flex border-b border-stone-200 text-xs font-bold">
+                            <button @click="taskerSubTab = 'market'" :class="taskerSubTab === 'market' ? 'border-teal-700 text-teal-700 border-b-2' : 'text-stone-400'" class="flex-1 pb-2">Sàn Việc Gần Bạn</button>
+                            <button @click="taskerSubTab = 'active'" :class="taskerSubTab === 'active' ? 'border-teal-700 text-teal-700 border-b-2' : 'text-stone-400'" class="flex-1 pb-2">Việc Đã Nhận</button>
+                        </div>
+
+                        <!-- Danh sách đơn hàng Tasker -->
+                        <div class="space-y-2.5">
+                            <!-- Chợ việc làm tự do -->
+                            <template x-if="taskerSubTab === 'market'">
+                                <template x-for="job in jobs.filter(j => j.status === 'finding')" :key="job.id">
+                                    <div class="bg-white p-3.5 rounded-xl border border-stone-200 shadow-sm">
+                                        <span class="text-[9px] font-bold bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded" x-text="job.category"></span>
+                                        <h4 class="font-bold text-xs text-stone-900 mt-1.5" x-text="job.title"></h4>
+                                        <p class="text-[10px] text-stone-500 mt-0.5" x-text="job.location"></p>
+                                        <div class="text-xs font-black text-teal-700 mt-2 flex justify-between items-center">
+                                            <span x-text="job.budget.toLocaleString() + 'đ'"></span>
+                                            <button @click="acceptJob(job.id)" class="px-3 py-1 bg-teal-700 text-white text-[10px] font-bold rounded-lg shadow-sm">Giật Đơn (Phí 10K)</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+
+                            <!-- Việc mình đang làm -->
+                            <template x-if="taskerSubTab === 'active'">
+                                <template x-for="job in jobs.filter(j => j.status !== 'finding' && j.taskerName === customName)" :key="job.id">
+                                    <div class="bg-white p-3.5 rounded-xl border border-stone-200 shadow-sm">
+                                        <h4 class="font-bold text-xs text-stone-900" x-text="job.title"></h4>
+                                        <p class="text-[10px] font-bold text-teal-700 mt-1" x-text="'Thù lao: ' + job.budget.toLocaleString() + 'đ'"></p>
+                                        
+                                        <div class="mt-3 border-t border-stone-100 pt-2 flex justify-end">
+                                            <template x-if="job.status === 'assigned'">
+                                                <button @click="reportComplete(job.id)" class="px-3 py-1 bg-orange-600 text-white text-[10px] font-bold rounded-md">Báo Cáo Đã Làm Xong</button>
+                                            </template>
+                                            <template x-if="job.status === 'reported'">
+                                                <span class="text-[9px] text-amber-600 font-medium">✓ Đã báo cáo, chờ chủ ví bấm nút giải ngân...</span>
+                                            </template>
+                                            <template x-if="job.status === 'completed'">
+                                                <span class="text-[9px] text-green-600 font-bold">✓ Tiền đã về ví bảo chứng của bạn!</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- CỬA SỔ HỘI THOẠI ĐÀM PHÁN CHAT (CHAT TAB) -->
+            <!-- ========================================== -->
+            <div x-show="activeTab === 'chat'" class="flex-1 flex flex-col overflow-hidden bg-white">
+                <!-- Khi chưa chọn phòng chat -->
+                <template x-if="!activeChatJobId">
+                    <div class="flex-1 flex flex-col items-center justify-center text-stone-400 p-6 text-center">
+                        <i data-lucide="message-square" class="w-10 h-10 text-stone-300 stroke-[1.5]"></i>
+                        <p class="text-xs mt-2">Chưa có kênh chat kết nối nào được mở.<br>Thợ cần "Giật đơn" trước để mở cổng đàm phán.</p>
+                    </div>
+                </template>
+
+                <!-- Khi đã có phòng chat kích hoạt -->
+                <template x-if="activeChatJobId">
+                    <div class="flex-1 flex flex-col overflow-hidden bg-stone-100" 
+                         x-data="{ get activeJob() { return jobs.find(j => j.id === activeChatJobId) } }">
+                        
+                        <!-- Chat Header -->
+                        <div class="bg-white px-3 py-2 border-b border-stone-200 shadow-sm shrink-0">
+                            <h4 class="text-xs font-bold text-stone-900 truncate" x-text="activeJob?.title"></h4>
+                            <p class="text-[9px] text-stone-400">Kênh đàm phán bảo chứng giữa Seeker & Tasker</p>
+                        </div>
+
+                        <!-- Chat Messages -->
+                        <div class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+                            <template x-for="(chat, idx) in activeJob?.chats" :key="idx">
+                                <div>
+                                    <!-- Tin nhắn hệ thống báo động -->
+                                    <template x-if="chat.sender === 'system'">
+                                        <div class="max-w-[90%] mx-auto bg-amber-50 border border-amber-200 rounded-lg p-2 my-2 text-center text-[10px] text-amber-800 font-semibold" x-text="chat.text"></div>
+                                    </template>
+                                    
+                                    <!-- Tin nhắn hội thoại thông thường -->
+                                    <template x-if="chat.sender !== 'system'">
+                                        <div :class="chat.sender === role ? 'justify-end' : 'justify-start'" class="flex w-full">
+                                            <div :class="chat.sender === role ? 'bg-stone-900 text-white rounded-br-none' : 'bg-white text-stone-800 rounded-bl-none'"
+                                                 class="max-w-[80%] p-2.5 rounded-2xl text-xs shadow-sm" x-text="chat.text"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Chat Input Bar -->
+                        <div class="bg-white border-t border-stone-200 p-2 flex items-center gap-2 shrink-0">
+                            <input type="text" x-model="chatInput" @keydown.enter="sendChat()" placeholder="Nhập tin nhắn thỏa thuận..." class="flex-1 px-3 py-1.5 text-xs bg-stone-50 border border-stone-200 rounded-full focus:outline-none focus:border-stone-900">
+                            <button @click="sendChat()" class="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center active:scale-90 transition shadow">
+                                <i data-lucide="send" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </template>
+            </div>
+
+            <!-- FOOTER BOTTOM TAB NAVIGATOR (THANH TAB CHUẨN APP) -->
+            <div class="bg-white border-t border-stone-200 h-14 flex justify-around items-center shrink-0 pb-1">
+                <button @click="activeTab = 'main'" :class="activeTab === 'main' ? 'text-orange-600' : 'text-stone-400'" class="flex flex-col items-center justify-center flex-1">
+                    <i data-lucide="briefcase" class="w-4 h-4"></i>
+                    <span class="text-[9px] font-bold mt-1">Việc làm</span>
+                </button>
+                <button @click="activeTab = 'chat'; if(jobs.find(j=>j.status !== 'finding') && !activeChatJobId) { activeChatJobId = jobs.find(j=>j.status !== 'finding').id }" :class="activeTab === 'chat' ? 'text-orange-600' : 'text-stone-400'" class="flex flex-col items-center justify-center flex-1">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                    <span class="text-[9px] font-bold mt-1">Tin nhắn</span>
+                </button>
+                <button @click="isLoggedIn = false" class="flex flex-col items-center justify-center flex-1 text-stone-400">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span class="text-[9px] font-bold mt-1">Đăng xuất</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- DIALOG MODAL: ĐÁNH GIÁ VÀ GIẢI NGÂN (ESCROW) -->
+        <!-- ========================================== -->
+        <div x-show="isRatingModal" class="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4 transition-opacity" style="display: none;">
+            <div class="bg-white w-full rounded-2xl p-5 space-y-4 shadow-xl">
+                <div class="text-center">
+                    <h3 class="font-black text-sm text-stone-900">Nghiệm Thu & Chấm Điểm Uy Tín</h3>
+                    <p class="text-[11px] text-stone-500 mt-1">Sau khi bạn bấm xác nhận, hệ thống cổng Ký Quỹ Escrow sẽ giải ngân thẳng ví của thợ.</p>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Đánh giá độ hài lòng (1-5 sao)</label>
+                    <input type="number" x-model="ratingScore" class="w-full px-3 py-1.5 text-xs border border-stone-200 rounded-xl focus:outline-none">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Nhận xét phản hồi</label>
+                    <input type="text" placeholder="Thợ làm rất cẩn thận, nhanh nhẹn..." class="w-full px-3 py-1.5 text-xs border border-stone-200 rounded-xl focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs font-bold pt-2">
+                    <button @click="isRatingModal = false" class="py-2 border border-stone-200 text-stone-700 rounded-xl">Hủy</button>
+                    <button @click="confirmRelease()" class="py-2 bg-orange-600 text-white rounded-xl shadow-md">Giải ngân ví thợ</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

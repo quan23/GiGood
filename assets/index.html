@@ -1,0 +1,2203 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>GiGood - Demo Mobile App</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- FontAwesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                orange: "#ea580c",
+                orangeHover: "#c2410c",
+                orangeLight: "#ffedd5",
+                teal: "#0f766e",
+                tealHover: "#115e59",
+                tealLight: "#f0fdfa",
+                stoneDark: "#1c1917",
+                stoneLight: "#fafaf9",
+                stoneBorder: "#e7e5e4",
+              },
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              poppins: ["Poppins", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        /* Khung mô phỏng khung hình điện thoại khi xem trên web.
+           Khi tách sang Expo, toàn bộ #phone-frame/#phone-screen sẽ bị bỏ
+           vì RN tự render full màn hình - layout bên trong (#app-root) giữ nguyên. */
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      html, body {
+        font-family: "Inter", sans-serif;
+        background-color: #1c1917;
+        margin: 0;
+        height: 100%;
+        overscroll-behavior: none;
+      }
+      /* ============ KHUNG GIẢ LẬP ĐIỆN THOẠI (chỉ để demo trên web/desktop) ============ */
+      #phone-frame {
+        max-width: 430px;
+        margin: 0 auto;
+        height: 100vh;
+        height: 100dvh;
+        background: #fafaf9;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 60px rgba(0,0,0,0.35);
+      }
+      @media (min-width: 431px) {
+        body { display: flex; align-items: center; justify-content: center; padding: 16px 0; }
+        #phone-frame { height: 92vh; max-height: 900px; border-radius: 40px; border: 10px solid #0a0a0a; }
+      }
+      #app-root {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        background: #fafaf9;
+      }
+      /* Custom scrollbar (desktop demo only) */
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
+
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* Radar Match-making Pulse */
+      @keyframes custom-ping {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(2.4); opacity: 0; }
+      }
+      .ping-effect { animation: custom-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+      @keyframes slide-up {
+        from { transform: translateY(16px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .anim-slide-up { animation: slide-up 0.25s ease-out; }
+
+      @keyframes toast-in {
+        from { transform: translate(-50%, 20px); opacity: 0; }
+        to { transform: translate(-50%, 0); opacity: 1; }
+      }
+
+      .tab-transition { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+
+      /* Bottom tab bar safe area */
+      .pb-safe { padding-bottom: max(10px, var(--safe-bottom)); }
+      .pt-safe { padding-top: var(--safe-top); }
+
+      .screen { display: none; flex-direction: column; height: 100%; }
+      .screen.active { display: flex; }
+
+      input, textarea, select { font-size: 14px; }
+      input:focus, textarea:focus, select:focus { outline: none; }
+    </style>
+  </head>
+  <body>
+    <div id="phone-frame">
+      <div id="app-root">
+
+        <!-- ============================================================
+             SCREEN: SPLASH / WELCOME
+        ============================================================ -->
+        <section id="screen-welcome" class="screen active">
+          <div class="flex-1 bg-gradient-to-br from-brand-orange via-orange-600 to-amber-600 relative overflow-hidden flex flex-col">
+            <div class="absolute -right-24 -bottom-24 w-72 h-72 rounded-full bg-white/10"></div>
+            <div class="absolute -left-16 top-20 w-44 h-44 rounded-full bg-white/5"></div>
+            <div class="absolute right-10 top-32 w-16 h-16 rounded-2xl bg-white/10 rotate-12"></div>
+
+            <div class="pt-safe flex-1 flex flex-col justify-between p-7 relative z-10 text-white">
+              <div class="flex items-center justify-between pt-4">
+                <span class="text-xs font-bold tracking-wider uppercase bg-white/20 px-3 py-1 rounded-full">Dự án GiGood</span>
+                <i class="fa-solid fa-bolt text-xl opacity-80"></i>
+              </div>
+
+              <div class="space-y-5">
+                <div class="space-y-2">
+                  <h1 class="text-5xl font-extrabold font-poppins leading-none">GiGood</h1>
+                  <p class="text-sm opacity-90 leading-relaxed max-w-[280px]">
+                    Kết nối việc vặt tức thì &amp; bảo chứng niềm tin hai chiều, ngay trong khu vực của bạn.
+                  </p>
+                </div>
+
+                <div class="space-y-3 pt-2">
+                  <div class="flex items-center space-x-3 text-xs">
+                    <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-shield-halved"></i></span>
+                    <p>Thanh toán ký quỹ an toàn, chỉ giải ngân khi xong việc</p>
+                  </div>
+                  <div class="flex items-center space-x-3 text-xs">
+                    <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-map-location-dot"></i></span>
+                    <p>Gợi ý Tasker gần bạn theo bán kính GPS</p>
+                  </div>
+                  <div class="flex items-center space-x-3 text-xs">
+                    <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-star"></i></span>
+                    <p>Đánh giá minh bạch hai chiều, bảo vệ cả hai bên</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-3 pb-safe">
+                <button onclick="goToScreen('screen-role-select')" class="w-full bg-white text-brand-orange font-bold text-sm py-3.5 rounded-2xl shadow-lg flex items-center justify-center space-x-2 active:scale-[0.98] transition-transform">
+                  <span>Bắt đầu ngay</span>
+                  <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+                <button onclick="goToScreen('screen-login')" class="w-full text-white/90 text-xs font-semibold py-2 text-center underline underline-offset-2">
+                  Tôi đã có tài khoản
+                </button>
+                <p class="text-[10px] opacity-60 text-center pt-1">© 2026 GiGood Inc. — Bản demo mô phỏng UX/UI</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             SCREEN: ĐĂNG NHẬP (nhanh bằng tài khoản mẫu hoặc SĐT)
+        ============================================================ -->
+        <section id="screen-login" class="screen">
+          <div class="pt-safe px-5 pb-4 flex items-center space-x-3 bg-white border-b border-brand-stoneBorder">
+            <button onclick="goToScreen('screen-welcome')" class="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-gray-600">
+              <i class="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            <h1 class="font-bold text-base text-gray-800">Đăng nhập</h1>
+          </div>
+
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 py-6 space-y-6">
+            <div>
+              <h2 class="text-2xl font-extrabold font-poppins text-gray-800">Chào mừng trở lại</h2>
+              <p class="text-xs text-gray-500 mt-1">Đăng nhập bằng số điện thoại hoặc dùng tài khoản mẫu để xem demo ngay.</p>
+            </div>
+
+            <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-3.5">
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-700">Số điện thoại</label>
+                <div class="relative">
+                  <i class="fa-solid fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                  <input type="tel" id="login-phone" required placeholder="09xx xxx xxx"
+                    class="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+                </div>
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-700">Mật khẩu</label>
+                <div class="relative">
+                  <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                  <input type="password" id="login-password" required placeholder="Nhập mật khẩu"
+                    class="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+                </div>
+              </div>
+              <button type="submit" class="w-full bg-brand-stoneDark text-white text-sm font-bold py-3.5 rounded-2xl shadow-md active:scale-[0.98] transition-transform">
+                Đăng nhập
+              </button>
+            </form>
+
+            <div class="relative flex items-center py-1">
+              <div class="flex-grow border-t border-gray-200"></div>
+              <span class="flex-shrink mx-3 text-gray-400 text-[11px] font-bold uppercase tracking-wider">Hoặc dùng tài khoản mẫu</span>
+              <div class="flex-grow border-t border-gray-200"></div>
+            </div>
+
+            <div class="space-y-2.5">
+              <button type="button" onclick="quickLogin('seeker')"
+                class="w-full flex items-center space-x-3 p-3 rounded-2xl border-2 border-orange-100 active:border-brand-orange bg-brand-orangeLight text-left transition-all">
+                <img class="w-11 h-11 rounded-full object-cover border-2 border-brand-orange flex-shrink-0"
+                  onerror="this.src='https://placehold.co/100x100/ea580c/ffffff?text=KV'"
+                  src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150" />
+                <div class="text-xs">
+                  <p class="font-bold text-brand-orange">Khánh Vy</p>
+                  <p class="text-gray-500 font-medium">Vai trò: Người Thuê (Seeker)</p>
+                </div>
+              </button>
+              <button type="button" onclick="quickLogin('tasker')"
+                class="w-full flex items-center space-x-3 p-3 rounded-2xl border-2 border-teal-100 active:border-brand-teal bg-brand-tealLight text-left transition-all">
+                <img class="w-11 h-11 rounded-full object-cover border-2 border-brand-teal flex-shrink-0"
+                  onerror="this.src='https://placehold.co/100x100/0f766e/ffffff?text=MQ'"
+                  src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150" />
+                <div class="text-xs">
+                  <p class="font-bold text-brand-teal">Minh Quân</p>
+                  <p class="text-gray-500 font-medium">Vai trò: Người Nhận Việc (Tasker)</p>
+                </div>
+              </button>
+            </div>
+
+            <p class="text-center text-xs text-gray-500 pt-2">
+              Chưa có tài khoản?
+              <button onclick="goToScreen('screen-role-select')" class="text-brand-orange font-bold">Đăng ký ngay</button>
+            </p>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             SCREEN: CHỌN VAI TRÒ ĐĂNG KÝ
+        ============================================================ -->
+        <section id="screen-role-select" class="screen">
+          <div class="pt-safe px-5 pb-4 flex items-center space-x-3 bg-white border-b border-brand-stoneBorder">
+            <button onclick="goToScreen('screen-welcome')" class="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-gray-600">
+              <i class="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            <h1 class="font-bold text-base text-gray-800">Tạo tài khoản</h1>
+          </div>
+
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 py-6 space-y-5">
+            <div>
+              <h2 class="text-2xl font-extrabold font-poppins text-gray-800">Bạn muốn dùng GiGood để làm gì?</h2>
+              <p class="text-xs text-gray-500 mt-1">Bạn có thể đổi vai trò bất cứ lúc nào sau khi đăng ký.</p>
+            </div>
+
+            <button onclick="selectSignupRole('seeker')"
+              class="w-full text-left p-4 rounded-2xl border-2 border-brand-stoneBorder active:border-brand-orange bg-white transition-all flex items-start space-x-3">
+              <span class="w-12 h-12 rounded-xl bg-brand-orangeLight flex items-center justify-center text-brand-orange text-lg flex-shrink-0">
+                <i class="fa-solid fa-user-tie"></i>
+              </span>
+              <div class="flex-1">
+                <p class="font-bold text-sm text-gray-800">Tôi cần thuê người làm việc</p>
+                <p class="text-xs text-gray-500 mt-0.5">Đăng việc vặt, tìm Tasker gần bạn và thanh toán an toàn</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-gray-300 mt-3 text-xs"></i>
+            </button>
+
+            <button onclick="selectSignupRole('tasker')"
+              class="w-full text-left p-4 rounded-2xl border-2 border-brand-stoneBorder active:border-brand-teal bg-white transition-all flex items-start space-x-3">
+              <span class="w-12 h-12 rounded-xl bg-brand-tealLight flex items-center justify-center text-brand-teal text-lg flex-shrink-0">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+              </span>
+              <div class="flex-1">
+                <p class="font-bold text-sm text-gray-800">Tôi muốn nhận việc, kiếm thêm thu nhập</p>
+                <p class="text-xs text-gray-500 mt-0.5">Tạo hồ sơ kỹ năng, nhận việc phù hợp gần khu vực của bạn</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-gray-300 mt-3 text-xs"></i>
+            </button>
+
+            <p class="text-center text-xs text-gray-500 pt-2">
+              Đã có tài khoản?
+              <button onclick="goToScreen('screen-login')" class="text-brand-orange font-bold">Đăng nhập</button>
+            </p>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             SCREEN: ĐĂNG KÝ - THÔNG TIN CƠ BẢN (chung cho cả 2 vai trò)
+        ============================================================ -->
+        <section id="screen-signup-basic" class="screen">
+          <div class="pt-safe px-5 pb-4 flex items-center space-x-3 bg-white border-b border-brand-stoneBorder">
+            <button onclick="goToScreen('screen-role-select')" class="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-gray-600">
+              <i class="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            <div class="flex-1">
+              <h1 class="font-bold text-base text-gray-800">Thông tin tài khoản</h1>
+              <p id="signup-basic-role-tag" class="text-[11px] text-brand-orange font-bold">Đăng ký: Người thuê</p>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 py-6">
+            <!-- Progress dots -->
+            <div class="flex items-center space-x-1.5 mb-6">
+              <span id="signup-step-dot-1" class="h-1.5 rounded-full bg-brand-orange flex-1"></span>
+              <span id="signup-step-dot-2" class="h-1.5 rounded-full bg-gray-200 flex-1"></span>
+            </div>
+
+            <form id="signup-basic-form" onsubmit="handleSignupBasicSubmit(event)" class="space-y-4">
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-700">Họ và tên <span class="text-red-500">*</span></label>
+                <input type="text" id="signup-name" required placeholder="Nguyễn Văn A"
+                  class="w-full px-4 py-3.5 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-700">Số điện thoại <span class="text-red-500">*</span></label>
+                <input type="tel" id="signup-phone" required placeholder="09xx xxx xxx"
+                  class="w-full px-4 py-3.5 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+                <p class="text-[10px] text-gray-400">Dùng để xác thực danh tính và liên hệ khi có việc.</p>
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-700">Mật khẩu <span class="text-red-500">*</span></label>
+                <input type="password" id="signup-password" required minlength="6" placeholder="Tối thiểu 6 ký tự"
+                  class="w-full px-4 py-3.5 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-700">Khu vực sinh sống <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <i class="fa-solid fa-location-dot absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                  <input type="text" id="signup-location" required placeholder="Quận/Phường, Thành phố"
+                    class="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+                </div>
+              </div>
+
+              <label class="flex items-start space-x-2.5 pt-1">
+                <input type="checkbox" required class="mt-0.5 w-4 h-4 rounded accent-brand-orange flex-shrink-0" />
+                <span class="text-[11px] text-gray-500 leading-relaxed">Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của GiGood, bao gồm việc xác thực số điện thoại.</span>
+              </label>
+
+              <button type="submit" id="signup-basic-submit-btn" class="w-full bg-brand-stoneDark text-white text-sm font-bold py-3.5 rounded-2xl shadow-md active:scale-[0.98] transition-transform flex items-center justify-center space-x-2">
+                <span>Tiếp tục</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             SCREEN: ĐĂNG KÝ - HỒ SƠ TASKER (chân dung: kỹ năng, mạnh ở đâu)
+        ============================================================ -->
+        <section id="screen-signup-tasker-profile" class="screen">
+          <div class="pt-safe px-5 pb-4 flex items-center space-x-3 bg-white border-b border-brand-stoneBorder">
+            <button onclick="goToScreen('screen-signup-basic')" class="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-gray-600">
+              <i class="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            <div class="flex-1">
+              <h1 class="font-bold text-base text-gray-800">Hồ sơ năng lực Tasker</h1>
+              <p class="text-[11px] text-brand-teal font-bold">Bước 2/2 — Xây dựng chân dung của bạn</p>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 py-6">
+            <div class="flex items-center space-x-1.5 mb-5">
+              <span class="h-1.5 rounded-full bg-brand-teal flex-1"></span>
+              <span class="h-1.5 rounded-full bg-brand-teal flex-1"></span>
+            </div>
+
+            <div class="bg-brand-tealLight border border-teal-100 rounded-2xl p-3.5 mb-5 flex items-start space-x-2.5">
+              <i class="fa-solid fa-circle-info text-brand-teal text-sm mt-0.5"></i>
+              <p class="text-[11px] text-teal-800 leading-relaxed">Hồ sơ này giúp hệ thống AI gợi ý đúng việc phù hợp với bạn, và giúp Seeker tin tưởng chọn bạn hơn.</p>
+            </div>
+
+            <form id="signup-tasker-form" onsubmit="handleSignupTaskerSubmit(event)" class="space-y-5">
+              <!-- Avatar -->
+              <div class="flex items-center space-x-3">
+                <img id="tasker-signup-avatar-preview" class="w-16 h-16 rounded-2xl object-cover border-2 border-brand-teal bg-stone-100"
+                  src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150" />
+                <div class="text-xs">
+                  <p class="font-bold text-gray-700">Ảnh đại diện</p>
+                  <p class="text-gray-400">Ảnh thật giúp tăng độ tin cậy (demo: ảnh mẫu)</p>
+                </div>
+              </div>
+
+              <!-- Kỹ năng / nhóm việc mạnh -->
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-700">Bạn mạnh ở lĩnh vực nào? <span class="text-red-500">*</span></label>
+                <p class="text-[10px] text-gray-400 -mt-1">Chọn ít nhất 1 nhóm để hệ thống gợi ý việc phù hợp</p>
+                <div class="grid grid-cols-2 gap-2.5" id="tasker-skill-grid">
+                  <button type="button" data-skill="repair" onclick="toggleSkillTag(this)"
+                    class="skill-tag-btn flex items-center space-x-2 p-3 rounded-xl border-2 border-brand-stoneBorder text-left transition-all">
+                    <i class="fa-solid fa-screwdriver-wrench text-sm text-gray-400"></i>
+                    <span class="text-xs font-bold text-gray-700">Sửa chữa vặt</span>
+                  </button>
+                  <button type="button" data-skill="cleaning" onclick="toggleSkillTag(this)"
+                    class="skill-tag-btn flex items-center space-x-2 p-3 rounded-xl border-2 border-brand-stoneBorder text-left transition-all">
+                    <i class="fa-solid fa-broom text-sm text-gray-400"></i>
+                    <span class="text-xs font-bold text-gray-700">Dọn dẹp nhà cửa</span>
+                  </button>
+                  <button type="button" data-skill="delivery" onclick="toggleSkillTag(this)"
+                    class="skill-tag-btn flex items-center space-x-2 p-3 rounded-xl border-2 border-brand-stoneBorder text-left transition-all">
+                    <i class="fa-solid fa-motorcycle text-sm text-gray-400"></i>
+                    <span class="text-xs font-bold text-gray-700">Vận chuyển/Giao hàng</span>
+                  </button>
+                  <button type="button" data-skill="helper" onclick="toggleSkillTag(this)"
+                    class="skill-tag-btn flex items-center space-x-2 p-3 rounded-xl border-2 border-brand-stoneBorder text-left transition-all">
+                    <i class="fa-solid fa-hands-holding text-sm text-gray-400"></i>
+                    <span class="text-xs font-bold text-gray-700">Hỗ trợ/Nhờ việc vặt</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Giới thiệu ngắn -->
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-700">Giới thiệu ngắn về bạn</label>
+                <textarea id="tasker-signup-bio" rows="3" placeholder="VD: Mình có 2 năm kinh nghiệm sửa chữa điện nước, làm việc cẩn thận và đúng giờ..."
+                  class="w-full px-4 py-3 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-teal/40 text-sm resize-none"></textarea>
+              </div>
+
+              <!-- Thời gian rảnh -->
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-700">Bạn thường rảnh nhận việc khi nào? <span class="text-red-500">*</span></label>
+                <select id="tasker-signup-availability" required
+                  class="w-full px-4 py-3.5 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-teal/40 text-sm bg-white">
+                  <option value="">— Chọn khung giờ —</option>
+                  <option value="all-day">Cả ngày, linh hoạt mọi lúc</option>
+                  <option value="morning">Buổi sáng (6h - 12h)</option>
+                  <option value="afternoon">Buổi chiều (12h - 18h)</option>
+                  <option value="evening">Buổi tối (18h - 22h)</option>
+                  <option value="weekend">Chỉ cuối tuần</option>
+                </select>
+              </div>
+
+              <!-- Phương tiện -->
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-700">Phương tiện di chuyển</label>
+                <select id="tasker-signup-vehicle"
+                  class="w-full px-4 py-3.5 rounded-2xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-teal/40 text-sm bg-white">
+                  <option value="motorbike">Xe máy</option>
+                  <option value="car">Ô tô</option>
+                  <option value="bike">Xe đạp</option>
+                  <option value="none">Không có / đi bộ</option>
+                </select>
+              </div>
+
+              <!-- Xác thực danh tính (placeholder cho kế hoạch, không bắt buộc trong MVP demo) -->
+              <div class="bg-stone-50 border border-brand-stoneBorder rounded-2xl p-3.5 flex items-start space-x-2.5">
+                <i class="fa-solid fa-id-card text-gray-400 text-sm mt-0.5"></i>
+                <div class="flex-1">
+                  <p class="text-xs font-bold text-gray-700">Xác thực danh tính (CCCD)</p>
+                  <p class="text-[10px] text-gray-400 mt-0.5">Có thể bổ sung sau trong phần Hồ sơ. Tài khoản đã xác thực sẽ có huy hiệu uy tín riêng.</p>
+                </div>
+                <span class="text-[10px] font-bold text-amber-500 flex-shrink-0">Chưa xác thực</span>
+              </div>
+
+              <button type="submit" class="w-full bg-brand-teal text-white text-sm font-bold py-3.5 rounded-2xl shadow-md active:scale-[0.98] transition-transform flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-circle-check text-xs"></i>
+                <span>Hoàn tất hồ sơ &amp; bắt đầu nhận việc</span>
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             SCREEN: APP CHÍNH (sau đăng nhập) — Header + Content + Bottom Tabs
+        ============================================================ -->
+        <section id="screen-main-app" class="screen">
+
+          <!-- Mobile Top Header -->
+          <header class="pt-safe bg-white border-b border-brand-stoneBorder px-4 pb-3 flex-shrink-0 relative z-30">
+            <div class="flex items-center justify-between pt-3">
+              <div class="flex items-center space-x-2">
+                <span class="text-brand-orange text-xl font-extrabold font-poppins tracking-tight">GiGood</span>
+                <span id="role-badge" class="bg-brand-orangeLight text-brand-orange text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Seeker</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <div class="relative">
+                  <button onclick="toggleNotificationCenter()" class="w-9 h-9 rounded-xl bg-stone-50 border border-brand-stoneBorder text-gray-500 flex items-center justify-center relative">
+                    <i class="fa-solid fa-bell text-sm"></i>
+                    <span id="notif-badge" class="absolute top-1 right-1.5 w-2 h-2 bg-brand-orange rounded-full hidden"></span>
+                  </button>
+                </div>
+                <button onclick="goToScreen('screen-profile')" class="flex-shrink-0">
+                  <img id="user-avatar-head" class="w-9 h-9 rounded-xl object-cover border border-brand-stoneBorder" src="" alt="Avatar" />
+                </button>
+              </div>
+            </div>
+
+            <!-- ROLE SWITCHER (mô phỏng đổi vai trò) -->
+            <div class="bg-gray-100 p-1 rounded-xl flex items-center mt-3">
+              <button id="toggle-seeker" onclick="switchUserRole('seeker')"
+                class="flex-1 py-2 rounded-lg text-[11px] font-extrabold transition-all flex items-center justify-center space-x-1.5 bg-white text-brand-orange shadow-sm">
+                <i class="fa-solid fa-user-tie"></i><span>Người Thuê</span>
+              </button>
+              <button id="toggle-tasker" onclick="switchUserRole('tasker')"
+                class="flex-1 py-2 rounded-lg text-[11px] font-extrabold transition-all flex items-center justify-center space-x-1.5 text-gray-500">
+                <i class="fa-solid fa-screwdriver-wrench"></i><span>Người Nhận</span>
+              </button>
+            </div>
+
+            <!-- Wallet + Escrow mini stats -->
+            <div class="grid grid-cols-2 gap-2 mt-3">
+              <div id="escrow-card-container" class="flex items-center space-x-2 bg-brand-tealLight border border-teal-200 px-3 py-2 rounded-xl">
+                <i class="fa-solid fa-shield-halved text-brand-teal text-sm"></i>
+                <div class="text-left leading-tight">
+                  <p class="text-[9px] text-gray-500 font-medium">Ký quỹ an toàn</p>
+                  <p id="global-escrow-balance" class="text-[11px] text-brand-teal font-extrabold">150,000 VND</p>
+                </div>
+              </div>
+              <div id="wallet-card-container" class="flex items-center space-x-2 bg-stone-50 border border-brand-stoneBorder px-3 py-2 rounded-xl">
+                <i class="fa-solid fa-wallet text-gray-500 text-sm"></i>
+                <div class="text-left leading-tight">
+                  <p id="wallet-title" class="text-[9px] text-gray-500 font-medium">Ví của bạn</p>
+                  <p id="global-wallet-balance" class="text-[11px] text-brand-stoneDark font-extrabold">1,420,000 VND</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notification dropdown tray -->
+            <div id="notif-tray" class="hidden absolute right-3 top-[68px] w-[88%] bg-white rounded-2xl border border-brand-stoneBorder shadow-xl p-4 z-50 text-xs space-y-3">
+              <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                <span class="font-extrabold text-gray-800">Thông báo của bạn</span>
+                <button onclick="clearNotifications()" class="text-[10px] text-brand-orange font-bold">Xóa hết</button>
+              </div>
+              <div id="notif-list" class="space-y-2.5 max-h-60 overflow-y-auto no-scrollbar">
+                <p class="text-gray-400 text-center py-4">Không có thông báo mới nào.</p>
+              </div>
+            </div>
+          </header>
+
+          <!-- Main scrollable content (role-specific sub-screens render here) -->
+          <main id="main-content" class="flex-1 overflow-y-auto no-scrollbar bg-stone-50 relative">
+
+            <!-- ============ SEEKER WORKSPACE ============ -->
+            <div id="seeker-workspace" class="h-full flex flex-col">
+
+              <!-- SUB-TAB: SEEKER - ĐĂNG VIỆC MỚI -->
+              <div id="seeker-sub-create" class="seeker-sub-screen flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
+                <div>
+                  <h2 class="text-lg font-extrabold font-poppins text-gray-800">Đăng việc mới</h2>
+                  <p class="text-xs text-gray-500">Mô tả rõ để Tasker phù hợp nhất nhận việc nhanh hơn</p>
+                </div>
+
+                <!-- Quick templates -->
+                <div class="space-y-2">
+                  <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wide">Mẫu việc nhanh</label>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <button type="button" onclick="applyJobTemplate('repair', 'Sửa vòi nước bị rò rỉ', 150000)"
+                      class="flex flex-col items-start p-3 rounded-xl border border-brand-stoneBorder bg-white text-left active:border-brand-orange">
+                      <i class="fa-solid fa-screwdriver-wrench text-brand-orange mb-1.5"></i>
+                      <span class="text-[11px] font-bold text-gray-700 leading-tight">Sửa chữa vặt</span>
+                    </button>
+                    <button type="button" onclick="applyJobTemplate('cleaning', 'Dọn dẹp nhà 2 phòng ngủ', 200000)"
+                      class="flex flex-col items-start p-3 rounded-xl border border-brand-stoneBorder bg-white text-left active:border-brand-orange">
+                      <i class="fa-solid fa-broom text-brand-orange mb-1.5"></i>
+                      <span class="text-[11px] font-bold text-gray-700 leading-tight">Dọn dẹp nhà cửa</span>
+                    </button>
+                    <button type="button" onclick="applyJobTemplate('delivery', 'Giao đồ gấp trong khu vực', 50000)"
+                      class="flex flex-col items-start p-3 rounded-xl border border-brand-stoneBorder bg-white text-left active:border-brand-orange">
+                      <i class="fa-solid fa-motorcycle text-brand-orange mb-1.5"></i>
+                      <span class="text-[11px] font-bold text-gray-700 leading-tight">Giao hàng</span>
+                    </button>
+                    <button type="button" onclick="applyJobTemplate('helper', 'Cần người bê vác đồ đạc', 120000)"
+                      class="flex flex-col items-start p-3 rounded-xl border border-brand-stoneBorder bg-white text-left active:border-brand-orange">
+                      <i class="fa-solid fa-hands-holding text-brand-orange mb-1.5"></i>
+                      <span class="text-[11px] font-bold text-gray-700 leading-tight">Bê vác/Phụ việc</span>
+                    </button>
+                  </div>
+                </div>
+
+                <form id="job-post-form" onsubmit="handlePostJob(event)" class="space-y-4 pb-4">
+                  <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-gray-700">Tên công việc <span class="text-red-500">*</span></label>
+                    <input type="text" id="job-title" required placeholder="Ví dụ: Tìm thợ thông đường ống nước bồn rửa"
+                      class="w-full px-4 py-3 rounded-xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+                  </div>
+
+                  <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-gray-700">Nhóm công việc</label>
+                    <select id="job-category" class="w-full px-4 py-3 rounded-xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm bg-white">
+                      <option value="repair">Sửa chữa vặt</option>
+                      <option value="cleaning">Dọn dẹp nhà cửa</option>
+                      <option value="delivery">Vận chuyển/Giao hàng</option>
+                      <option value="helper">Hỗ trợ/Nhờ việc vặt</option>
+                    </select>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-gray-700">Mô tả công việc chi tiết <span class="text-red-500">*</span></label>
+                    <textarea id="job-desc" rows="3" required placeholder="Ghi rõ yêu cầu để Tasker chuẩn bị dụng cụ phù hợp..."
+                      class="w-full px-4 py-3 rounded-xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm resize-none"></textarea>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                      <label class="block text-xs font-bold text-gray-700">Mức giá đề xuất <span class="text-red-500">*</span></label>
+                      <div class="relative">
+                        <input type="number" id="job-budget" required placeholder="100,000"
+                          class="w-full pl-4 pr-12 py-3 rounded-xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+                        <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">VND</span>
+                      </div>
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="block text-xs font-bold text-gray-700">Mức độ ưu tiên</label>
+                      <select id="job-urgency" class="w-full px-3 py-3 rounded-xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm bg-white">
+                        <option value="normal">Bình thường</option>
+                        <option value="urgent">Cần liền (phụ phí)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-gray-700">Địa điểm thực hiện <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                      <i class="fa-solid fa-location-dot absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                      <input type="text" id="job-location" required placeholder="Số nhà, đường, quận..."
+                        class="w-full pl-10 pr-4 py-3 rounded-xl border border-brand-stoneBorder focus:ring-2 focus:ring-brand-orange/40 text-sm" />
+                    </div>
+                  </div>
+
+                  <div class="bg-brand-tealLight border border-teal-100 rounded-xl p-3 flex items-start space-x-2.5">
+                    <i class="fa-solid fa-shield-halved text-brand-teal text-sm mt-0.5"></i>
+                    <p class="text-[11px] text-teal-800 leading-relaxed">Số tiền sẽ được GiGood giữ ký quỹ an toàn ngay khi có Tasker nhận việc, chỉ giải ngân khi bạn xác nhận hoàn thành.</p>
+                  </div>
+
+                  <button type="submit" class="w-full bg-brand-orange text-white text-sm font-bold py-3.5 rounded-2xl shadow-md active:scale-[0.98] transition-transform flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                    <span>Đăng việc &amp; Tìm Tasker ngay</span>
+                  </button>
+                </form>
+              </div>
+
+              <!-- SUB-TAB: SEEKER - VIỆC CỦA TÔI -->
+              <div id="seeker-sub-jobs" class="seeker-sub-screen hidden flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
+
+                <!-- Matching radar panel -->
+                <div id="seeker-matching-panel" class="hidden bg-white border border-brand-stoneBorder rounded-2xl p-5 text-center space-y-3">
+                  <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+                    <span class="absolute inset-0 rounded-full bg-brand-orange/20 ping-effect"></span>
+                    <span class="relative w-14 h-14 rounded-full bg-brand-orange text-white flex items-center justify-center text-lg">
+                      <i class="fa-solid fa-satellite-dish"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <p class="font-bold text-sm text-gray-800">Đang tìm Tasker phù hợp...</p>
+                    <p id="seeker-matching-job-title" class="text-xs text-gray-500 mt-0.5">Việc của bạn</p>
+                  </div>
+                  <p class="text-[11px] text-gray-400">Đã tìm trong <span id="seeker-searching-timer">0</span>s</p>
+                </div>
+
+                <!-- Matched tasker found block -->
+                <div id="matched-tasker-view" class="hidden bg-white border-2 border-brand-orange rounded-2xl p-4 space-y-3 anim-slide-up">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold text-brand-orange uppercase tracking-wide bg-brand-orangeLight px-2 py-0.5 rounded-full">Đã ghép việc!</span>
+                  </div>
+                  <div class="flex items-center space-x-3">
+                    <img id="matched-tasker-avatar" class="w-12 h-12 rounded-xl object-cover border" src="" />
+                    <div class="flex-1">
+                      <p id="matched-tasker-name" class="font-bold text-sm text-gray-800">Tasker</p>
+                      <p class="text-[11px] text-amber-500 font-bold"><i class="fa-solid fa-star"></i> 4.9 · Đã nhận 120 việc</p>
+                    </div>
+                  </div>
+                  <button onclick="seekerSwitchSubTab('chat')" class="w-full bg-brand-stoneDark text-white text-xs font-bold py-2.5 rounded-xl flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-comment-dots"></i><span>Mở trò chuyện với Tasker</span>
+                  </button>
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold text-sm text-gray-800">Việc đang xử lý</h3>
+                    <span id="seeker-active-jobs-count-text" class="text-[11px] text-gray-400">0 việc</span>
+                  </div>
+                  <div id="seeker-active-jobs-list" class="space-y-3"></div>
+                </div>
+              </div>
+
+              <!-- SUB-TAB: SEEKER - CHAT -->
+              <div id="seeker-sub-chat" class="seeker-sub-screen hidden flex-1 relative overflow-hidden">
+                <div id="seeker-chat-list-view" class="absolute inset-0 flex flex-col">
+                  <div class="px-4 py-3 border-b border-brand-stoneBorder bg-white flex-shrink-0">
+                    <h2 class="font-bold text-sm text-gray-800">Tin nhắn</h2>
+                  </div>
+                  <div id="seeker-chat-sidebar" class="flex-1 overflow-y-auto no-scrollbar divide-y divide-brand-stoneBorder bg-white"></div>
+                </div>
+
+                <div id="seeker-chat-detail-view" class="hidden absolute inset-0 flex flex-col bg-white z-10">
+                  <div id="seeker-chat-none-selected" class="hidden flex-1 flex items-center justify-center text-center px-8">
+                    <p class="text-xs text-gray-400">Chọn một cuộc trò chuyện để bắt đầu nhắn tin.</p>
+                  </div>
+                  <div id="seeker-chat-active-box" class="hidden flex-1 flex flex-col">
+                    <div class="px-3 py-3 border-b border-brand-stoneBorder flex items-center space-x-2.5 bg-white flex-shrink-0">
+                      <button onclick="seekerCloseChatDetail()" class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-gray-600 flex-shrink-0">
+                        <i class="fa-solid fa-arrow-left text-xs"></i>
+                      </button>
+                      <img id="seeker-chat-header-avatar" class="w-9 h-9 rounded-full object-cover border flex-shrink-0" src="" />
+                      <div class="flex-1 min-w-0">
+                        <p id="seeker-chat-header-name" class="font-bold text-xs text-gray-800 truncate">Tasker</p>
+                        <p id="seeker-chat-job-tag" class="text-[10px] text-gray-400 truncate">Việc đang làm</p>
+                      </div>
+                    </div>
+                    <div id="seeker-chat-thread" class="flex-1 overflow-y-auto no-scrollbar p-3 space-y-3 bg-stone-50"></div>
+                    <form onsubmit="handleSendChatMessage(event, 'seeker')" class="p-2.5 border-t border-brand-stoneBorder bg-white flex items-center space-x-2 flex-shrink-0">
+                      <input id="seeker-chat-input-field" type="text" placeholder="Nhập tin nhắn..."
+                        class="flex-1 px-4 py-2.5 rounded-full border border-brand-stoneBorder text-xs focus:ring-2 focus:ring-brand-orange/40" />
+                      <button type="submit" class="w-10 h-10 rounded-full bg-brand-orange text-white flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SUB-TAB: SEEKER - LỊCH SỬ -->
+              <div id="seeker-sub-history" class="seeker-sub-screen hidden flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
+                <h2 class="text-lg font-extrabold font-poppins text-gray-800">Lịch sử giao dịch</h2>
+                <div id="seeker-history-list" class="space-y-3"></div>
+              </div>
+            </div>
+
+            <!-- ============ TASKER WORKSPACE ============ -->
+            <div id="tasker-workspace" class="hidden h-full flex flex-col">
+
+              <!-- SUB-TAB: TASKER - BẢNG VIỆC + BẢN ĐỒ -->
+              <div id="tasker-sub-board" class="tasker-sub-screen flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
+                <div>
+                  <h2 class="text-lg font-extrabold font-poppins text-gray-800">Việc gần bạn</h2>
+                  <p class="text-xs text-gray-500">Gợi ý theo vị trí GPS &amp; kỹ năng phù hợp với hồ sơ của bạn</p>
+                </div>
+
+                <!-- Mini interactive map -->
+                <div id="interactive-map-box" class="relative w-full h-44 rounded-2xl overflow-hidden border border-brand-stoneBorder bg-stone-100">
+                  <svg class="absolute inset-0 w-full h-full opacity-40" viewBox="0 0 400 180" preserveAspectRatio="none">
+                    <line x1="0" y1="45" x2="400" y2="45" stroke="#d6d3d1" stroke-width="2"/>
+                    <line x1="0" y1="100" x2="400" y2="100" stroke="#d6d3d1" stroke-width="2"/>
+                    <line x1="0" y1="150" x2="400" y2="150" stroke="#d6d3d1" stroke-width="2"/>
+                    <line x1="90" y1="0" x2="90" y2="180" stroke="#d6d3d1" stroke-width="2"/>
+                    <line x1="220" y1="0" x2="220" y2="180" stroke="#d6d3d1" stroke-width="2"/>
+                    <line x1="320" y1="0" x2="320" y2="180" stroke="#d6d3d1" stroke-width="2"/>
+                  </svg>
+                  <div id="map-me-tag" class="absolute" style="left:45%; top:55%;">
+                    <span class="relative flex items-center justify-center w-7 h-7 -ml-3.5 -mt-3.5">
+                      <span class="absolute inset-0 rounded-full bg-brand-teal/30 ping-effect"></span>
+                      <span class="relative w-3.5 h-3.5 rounded-full bg-brand-teal border-2 border-white shadow"></span>
+                    </span>
+                  </div>
+                  <div id="dynamic-map-markers"></div>
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold text-sm text-gray-800">Danh sách việc khả dụng</h3>
+                    <span id="tasker-available-jobs-count" class="text-[11px] text-gray-400">0 việc</span>
+                  </div>
+                  <div id="tasker-available-jobs-list" class="space-y-3"></div>
+                </div>
+              </div>
+
+              <!-- SUB-TAB: TASKER - VIỆC ĐÃ NHẬN -->
+              <div id="tasker-sub-active" class="tasker-sub-screen hidden flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
+                <h2 class="text-lg font-extrabold font-poppins text-gray-800">Việc đã nhận</h2>
+                <div id="tasker-assigned-jobs-list" class="space-y-3"></div>
+              </div>
+
+              <!-- SUB-TAB: TASKER - CHAT -->
+              <div id="tasker-sub-chat" class="tasker-sub-screen hidden flex-1 relative overflow-hidden">
+                <div id="tasker-chat-list-view" class="absolute inset-0 flex flex-col">
+                  <div class="px-4 py-3 border-b border-brand-stoneBorder bg-white flex-shrink-0">
+                    <h2 class="font-bold text-sm text-gray-800">Tin nhắn</h2>
+                  </div>
+                  <div id="tasker-chat-sidebar" class="flex-1 overflow-y-auto no-scrollbar divide-y divide-brand-stoneBorder bg-white"></div>
+                </div>
+
+                <div id="tasker-chat-detail-view" class="hidden absolute inset-0 flex flex-col bg-white z-10">
+                  <div id="tasker-chat-none-selected" class="hidden flex-1 flex items-center justify-center text-center px-8">
+                    <p class="text-xs text-gray-400">Chọn một cuộc trò chuyện để bắt đầu nhắn tin.</p>
+                  </div>
+                  <div id="tasker-chat-active-box" class="hidden flex-1 flex flex-col">
+                    <div class="px-3 py-3 border-b border-brand-stoneBorder flex items-center space-x-2.5 bg-white flex-shrink-0">
+                      <button onclick="taskerCloseChatDetail()" class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-gray-600 flex-shrink-0">
+                        <i class="fa-solid fa-arrow-left text-xs"></i>
+                      </button>
+                      <img id="tasker-chat-header-avatar" class="w-9 h-9 rounded-full object-cover border flex-shrink-0" src="" />
+                      <div class="flex-1 min-w-0">
+                        <p id="tasker-chat-header-name" class="font-bold text-xs text-gray-800 truncate">Khách hàng</p>
+                        <p id="tasker-chat-job-tag" class="text-[10px] text-gray-400 truncate">Việc đang làm</p>
+                      </div>
+                    </div>
+                    <div id="tasker-chat-thread" class="flex-1 overflow-y-auto no-scrollbar p-3 space-y-3 bg-stone-50"></div>
+                    <form onsubmit="handleSendChatMessage(event, 'tasker')" class="p-2.5 border-t border-brand-stoneBorder bg-white flex items-center space-x-2 flex-shrink-0">
+                      <input id="tasker-chat-input-field" type="text" placeholder="Nhập tin nhắn..."
+                        class="flex-1 px-4 py-2.5 rounded-full border border-brand-stoneBorder text-xs focus:ring-2 focus:ring-brand-teal/40" />
+                      <button type="submit" class="w-10 h-10 rounded-full bg-brand-teal text-white flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SUB-TAB: TASKER - THU NHẬP -->
+              <div id="tasker-sub-earnings" class="tasker-sub-screen hidden flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
+                <h2 class="text-lg font-extrabold font-poppins text-gray-800">Thu nhập của bạn</h2>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="bg-white border border-brand-stoneBorder rounded-2xl p-3.5">
+                    <i class="fa-solid fa-sack-dollar text-brand-teal mb-1.5"></i>
+                    <p id="tasker-stat-earnings" class="text-base font-extrabold text-gray-800">0 VND</p>
+                    <p class="text-[10px] text-gray-400 font-medium">Tổng thu nhập</p>
+                  </div>
+                  <div class="bg-white border border-brand-stoneBorder rounded-2xl p-3.5">
+                    <i class="fa-solid fa-circle-check text-brand-orange mb-1.5"></i>
+                    <p id="tasker-stat-count" class="text-base font-extrabold text-gray-800">0</p>
+                    <p class="text-[10px] text-gray-400 font-medium">Việc hoàn thành</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 class="font-bold text-sm text-gray-800 mb-2">Lịch sử nhận tiền</h3>
+                  <div id="tasker-earnings-table-body" class="space-y-2.5"></div>
+                </div>
+              </div>
+            </div>
+          </main>
+
+          <!-- Bottom Tab Bar (đổi theo role) -->
+          <nav class="pb-safe bg-white border-t border-brand-stoneBorder flex-shrink-0 flex items-stretch">
+            <!-- Seeker tabs -->
+            <div id="seeker-tabbar" class="flex w-full">
+              <button id="seeker-tab-create" onclick="seekerSwitchSubTab('create')" class="flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-brand-orange">
+                <i class="fa-solid fa-plus-circle text-lg"></i>
+                <span class="text-[10px] font-bold">Đăng việc</span>
+              </button>
+              <button id="seeker-tab-jobs" onclick="seekerSwitchSubTab('jobs')" class="flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-gray-400 relative">
+                <i class="fa-solid fa-list-check text-lg"></i>
+                <span class="text-[10px] font-bold">Việc của tôi</span>
+                <span id="seeker-jobs-badge" class="hidden absolute top-1.5 right-[28%] w-4 h-4 bg-brand-orange text-white text-[8px] font-bold rounded-full flex items-center justify-center">0</span>
+              </button>
+              <button id="seeker-tab-chat" onclick="seekerSwitchSubTab('chat')" class="flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-gray-400 relative">
+                <i class="fa-solid fa-comment-dots text-lg"></i>
+                <span class="text-[10px] font-bold">Tin nhắn</span>
+                <span id="seeker-chat-dot" class="hidden absolute top-1.5 right-[30%] w-2 h-2 bg-brand-orange rounded-full"></span>
+              </button>
+              <button id="seeker-tab-history" onclick="seekerSwitchSubTab('history')" class="flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-gray-400">
+                <i class="fa-solid fa-receipt text-lg"></i>
+                <span class="text-[10px] font-bold">Lịch sử</span>
+              </button>
+            </div>
+
+            <!-- Tasker tabs -->
+            <div id="tasker-tabbar" class="hidden flex w-full">
+              <button id="tasker-tab-board" onclick="taskerSwitchSubTab('board')" class="flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-brand-teal">
+                <i class="fa-solid fa-map-location-dot text-lg"></i>
+                <span class="text-[10px] font-bold">Bảng việc</span>
+              </button>
+              <button id="tasker-tab-active" onclick="taskerSwitchSubTab('active')" class="flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-gray-400 relative">
+                <i class="fa-solid fa-briefcase text-lg"></i>
+                <span class="text-[10px] font-bold">Đã nhận</span>
+                <span id="tasker-jobs-badge" class="hidden absolute top-1.5 right-[28%] w-4 h-4 bg-brand-teal text-white text-[8px] font-bold rounded-full flex items-center justify-center">0</span>
+              </button>
+              <button id="tasker-tab-chat" onclick="taskerSwitchSubTab('chat')" class="flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-gray-400 relative">
+                <i class="fa-solid fa-comment-dots text-lg"></i>
+                <span class="text-[10px] font-bold">Tin nhắn</span>
+                <span id="tasker-chat-dot" class="hidden absolute top-1.5 right-[30%] w-2 h-2 bg-brand-teal rounded-full"></span>
+              </button>
+              <button id="tasker-tab-earnings" onclick="taskerSwitchSubTab('earnings')" class="flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-gray-400">
+                <i class="fa-solid fa-sack-dollar text-lg"></i>
+                <span class="text-[10px] font-bold">Thu nhập</span>
+              </button>
+            </div>
+          </nav>
+        </section>
+
+        <!-- ============================================================
+             SCREEN: HỒ SƠ CÁ NHÂN (xem chân dung người dùng)
+        ============================================================ -->
+        <section id="screen-profile" class="screen">
+          <div class="pt-safe px-5 pb-4 flex items-center space-x-3 bg-white border-b border-brand-stoneBorder">
+            <button onclick="goToScreen('screen-main-app')" class="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-gray-600">
+              <i class="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            <h1 class="font-bold text-base text-gray-800">Hồ sơ của tôi</h1>
+          </div>
+
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 py-6 space-y-5">
+            <div class="flex items-center space-x-4">
+              <img id="profile-avatar-large" class="w-16 h-16 rounded-2xl object-cover border-2 border-brand-orange" src="" />
+              <div>
+                <h2 id="profile-name-large" class="font-extrabold text-lg text-gray-800">Tên người dùng</h2>
+                <p id="profile-role-tag" class="text-xs text-brand-orange font-bold">Người Thuê (Seeker)</p>
+                <p class="text-[11px] text-amber-500 font-bold mt-0.5"><i class="fa-solid fa-star"></i> Thành viên Đồng</p>
+              </div>
+            </div>
+
+            <div id="profile-tasker-details" class="hidden space-y-3">
+              <div class="bg-white border border-brand-stoneBorder rounded-2xl p-4 space-y-2.5">
+                <p class="text-xs font-bold text-gray-700">Chân dung năng lực</p>
+                <div id="profile-skill-tags" class="flex flex-wrap gap-1.5"></div>
+                <p id="profile-bio-text" class="text-xs text-gray-500 leading-relaxed pt-1"></p>
+                <div class="grid grid-cols-2 gap-2 pt-2 text-[11px] text-gray-500">
+                  <p><i class="fa-solid fa-clock text-gray-400 mr-1"></i><span id="profile-availability-text">—</span></p>
+                  <p><i class="fa-solid fa-motorcycle text-gray-400 mr-1"></i><span id="profile-vehicle-text">—</span></p>
+                </div>
+              </div>
+              <div class="bg-stone-50 border border-brand-stoneBorder rounded-2xl p-3.5 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-id-card text-gray-400 text-sm"></i>
+                  <p class="text-xs font-bold text-gray-700">Xác thực danh tính</p>
+                </div>
+                <span class="text-[10px] font-bold text-amber-500">Chưa xác thực</span>
+              </div>
+            </div>
+
+            <div class="bg-white border border-brand-stoneBorder rounded-2xl divide-y divide-brand-stoneBorder overflow-hidden">
+              <div class="px-4 py-3.5 flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-700">Số điện thoại</span>
+                <span id="profile-phone-text" class="text-xs text-gray-500">—</span>
+              </div>
+              <div class="px-4 py-3.5 flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-700">Khu vực</span>
+                <span id="profile-location-text" class="text-xs text-gray-500">—</span>
+              </div>
+            </div>
+
+            <button onclick="logOutAndReset()" class="w-full bg-red-50 text-red-500 text-sm font-bold py-3.5 rounded-2xl flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             TOAST THÔNG BÁO NHANH (đè lên trên cùng)
+        ============================================================ -->
+        <div id="toast-box" class="fixed bottom-6 left-1/2 -translate-x-1/2 translate-y-20 opacity-0 pointer-events-none transition-all duration-300 z-[100] bg-white border border-brand-stoneBorder shadow-xl rounded-2xl px-4 py-3 flex items-center space-x-2.5 max-w-[90%]">
+          <span id="toast-icon" class="text-sm flex-shrink-0"><i class="fa-solid fa-circle-info text-brand-orange"></i></span>
+          <p id="toast-message" class="text-xs font-semibold text-gray-700"></p>
+        </div>
+
+        <!-- ============================================================
+             MODAL: SEEKER GIẢI NGÂN KÝ QUỸ & ĐÁNH GIÁ TASKER
+        ============================================================ -->
+        <div id="completion-modal" class="hidden fixed inset-0 z-[90] bg-black/50 flex items-end justify-center">
+          <div id="completion-modal-container" class="bg-white w-full rounded-t-3xl p-6 space-y-5 anim-slide-up max-h-[85%] overflow-y-auto no-scrollbar">
+            <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto"></div>
+            <div class="text-center space-y-1">
+              <span class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl mx-auto">
+                <i class="fa-solid fa-circle-check"></i>
+              </span>
+              <h3 class="font-extrabold text-base text-gray-800 pt-1">Xác nhận hoàn thành công việc</h3>
+              <p id="modal-payment-title" class="text-xs text-gray-500">Tasker báo đã hoàn thành. Giải ngân ký quỹ và đánh giá nhé.</p>
+            </div>
+
+            <div class="bg-stone-50 border border-brand-stoneBorder rounded-2xl p-3.5 text-center">
+              <p class="text-[11px] text-gray-500">Số tiền sẽ được chuyển cho Tasker</p>
+              <p id="modal-release-amount" class="text-xl font-extrabold text-brand-teal">0 VND</p>
+            </div>
+
+            <div class="space-y-2">
+              <p class="text-xs font-bold text-gray-700 text-center">Bạn đánh giá Tasker này thế nào?</p>
+              <div id="modal-rating-stars-row" class="flex items-center justify-center space-x-2 text-2xl text-amber-400"></div>
+            </div>
+
+            <textarea id="modal-rating-comment" rows="2" placeholder="Viết vài lời nhận xét (không bắt buộc)..."
+              class="w-full px-4 py-3 rounded-2xl border border-brand-stoneBorder text-xs resize-none"></textarea>
+
+            <div class="flex gap-3 pb-2">
+              <button onclick="closeCompletionModal()" class="flex-1 bg-stone-100 text-gray-600 text-xs font-bold py-3.5 rounded-2xl">Để sau</button>
+              <button onclick="confirmReleaseEscrow()" class="flex-1 bg-brand-teal text-white text-xs font-bold py-3.5 rounded-2xl flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-paper-plane text-[10px]"></i><span>Giải ngân &amp; Gửi đánh giá</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================
+             MODAL: TASKER ĐÁNH GIÁ SEEKER (2 chiều)
+        ============================================================ -->
+        <div id="tasker-rating-modal" class="hidden fixed inset-0 z-[90] bg-black/50 flex items-end justify-center">
+          <div id="tasker-rating-modal-container" class="bg-white w-full rounded-t-3xl p-6 space-y-5 anim-slide-up max-h-[85%] overflow-y-auto no-scrollbar">
+            <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto"></div>
+            <div class="text-center space-y-1">
+              <span class="w-12 h-12 rounded-full bg-orange-50 text-brand-orange flex items-center justify-center text-xl mx-auto">
+                <i class="fa-solid fa-star"></i>
+              </span>
+              <h3 class="font-extrabold text-base text-gray-800 pt-1">Đánh giá khách hàng</h3>
+              <p class="text-xs text-gray-500">Đã báo hoàn thành công việc. Đánh giá để xây dựng uy tín hai chiều.</p>
+            </div>
+
+            <div class="space-y-2">
+              <p class="text-xs font-bold text-gray-700 text-center">Bạn đánh giá khách hàng này thế nào?</p>
+              <div id="tasker-rating-stars-row" class="flex items-center justify-center space-x-2 text-2xl text-amber-400"></div>
+            </div>
+
+            <textarea id="tasker-rating-comment" rows="2" placeholder="Viết vài lời nhận xét (không bắt buộc)..."
+              class="w-full px-4 py-3 rounded-2xl border border-brand-stoneBorder text-xs resize-none"></textarea>
+
+            <div class="flex gap-3 pb-2">
+              <button onclick="closeTaskerRatingModal()" class="flex-1 bg-stone-100 text-gray-600 text-xs font-bold py-3.5 rounded-2xl">Để sau</button>
+              <button onclick="confirmTaskerRating()" class="flex-1 bg-brand-orange text-white text-xs font-bold py-3.5 rounded-2xl flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-check text-[10px]"></i><span>Gửi đánh giá</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <script>
+      // ============================================================
+      // GIGOOD DEMO APP — STATE & LOGIC
+      // Toàn bộ state nằm trong window.GiGoodState để dễ tách sang
+      // Zustand store khi chuyển sang Expo (xem README.md kèm theo).
+      // ============================================================
+
+      window.GiGoodState = {
+        currentUserRole: "seeker", // 'seeker' hoặc 'tasker'
+        seekerSubTab: "create",
+        taskerSubTab: "board",
+
+        // Hồ sơ người dùng đang đăng nhập
+        profile: {
+          name: "",
+          avatar: "",
+          role: "seeker",
+          phone: "",
+          location: "",
+          // Chân dung Tasker (chỉ có nếu role tasker / đã đăng ký làm tasker)
+          taskerProfile: null, // { skills: [], bio, availability, vehicle, verified }
+        },
+
+        notifications: [],
+
+        seekerWallet: 1420000,
+        taskerWallet: 2850000,
+        escrowHeldPool: 150000,
+
+        activeChatId: null,
+        seekerChatDetailOpen: false,
+        taskerChatDetailOpen: false,
+
+        jobs: [
+          {
+            id: 201,
+            title: "Khơi thông thoát sàn toilet tràn nước",
+            category: "repair",
+            budget: 150000,
+            location: "120 Nguyễn Huệ, Phường Bến Nghé, Quận 1",
+            description:
+              "Đường thoát nước phòng tắm bị tắc rác bẩn gây tràn. Cần thợ đem theo dây thông tắc lò xo dài tối thiểu 3m xử lý triệt để.",
+            status: "assigned", // 'finding' | 'assigned' | 'completed' | 'cancelled'
+            seekerName: "Khánh Vy",
+            taskerName: "Minh Quân T.",
+            timeTag: "25 phút trước",
+            chats: [
+              {
+                sender: "tasker",
+                text: "Chào chị Vy, em vừa nhận đơn thông thoát sàn của mình. Em chuẩn bị đồ đạc rồi chạy qua liền đây chị nha.",
+                time: "10:42",
+              },
+              {
+                sender: "seeker",
+                text: "Chào em, nhớ mang theo máy thông tắc lò xo loại lớn nhé. Đường cống nhà chị dài lắm.",
+                time: "10:44",
+              },
+              {
+                sender: "tasker",
+                text: "Dạ vâng ạ, máy lò xo em bỏ sẵn sau xe rồi, tầm 10 phút nữa em có mặt chị ạ.",
+                time: "10:45",
+              },
+            ],
+            seekerRating: null,
+            taskerRating: null,
+            isCompletedReportedByTasker: false,
+            mapX: "20%",
+            mapY: "45%",
+          },
+          {
+            id: 202,
+            title: "Giao gấp hộp bánh ngọt cho khách hàng",
+            category: "delivery",
+            budget: 45000,
+            location: "88 Pasteur, Quận 1 đến Quận 3",
+            description:
+              "Cần một bạn shipper chạy cẩn thận bọc màng khí tránh va đập hư hỏng trang trí mặt bánh.",
+            status: "finding",
+            seekerName: "Khánh Vy",
+            taskerName: null,
+            timeTag: "2 giờ trước",
+            chats: [],
+            seekerRating: null,
+            taskerRating: null,
+            isCompletedReportedByTasker: false,
+            mapX: "70%",
+            mapY: "35%",
+          },
+        ],
+      };
+
+      const CATEGORY_META = {
+        repair: { label: "Sửa chữa vặt", icon: "fa-screwdriver-wrench" },
+        cleaning: { label: "Dọn dẹp nhà cửa", icon: "fa-broom" },
+        delivery: { label: "Vận chuyển/Giao hàng", icon: "fa-motorcycle" },
+        helper: { label: "Hỗ trợ/Nhờ việc vặt", icon: "fa-hands-holding" },
+      };
+
+      const AVAILABILITY_LABEL = {
+        "all-day": "Cả ngày, linh hoạt",
+        morning: "Buổi sáng (6h-12h)",
+        afternoon: "Buổi chiều (12h-18h)",
+        evening: "Buổi tối (18h-22h)",
+        weekend: "Chỉ cuối tuần",
+      };
+      const VEHICLE_LABEL = {
+        motorbike: "Xe máy",
+        car: "Ô tô",
+        bike: "Xe đạp",
+        none: "Đi bộ / không có xe",
+      };
+
+      let matchingTimerInterval = null;
+      let matchingJobIdRef = null;
+      let selectedStarRating = 5;
+      let selectedTaskerStarRating = 5;
+      let currentCompletingJobIdRef = null;
+      let currentRatingJobIdRef = null;
+      let pendingSignupRole = "seeker";
+      let nextJobId = 300;
+
+      // ==================== SCREEN NAVIGATION (Expo Router analog) ====================
+      // Mỗi <section class="screen"> tương ứng 1 route trong Expo Router.
+      function goToScreen(screenId) {
+        document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
+        document.getElementById(screenId).classList.add("active");
+        window.scrollTo(0, 0);
+      }
+
+      // ==================== AUTH: ĐĂNG NHẬP NHANH ====================
+      function quickLogin(role) {
+        if (role === "seeker") {
+          window.GiGoodState.profile = {
+            name: "Khánh Vy",
+            avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
+            role: "seeker",
+            phone: "0901 234 567",
+            location: "Quận 1, TP. Hồ Chí Minh",
+            taskerProfile: null,
+          };
+        } else {
+          window.GiGoodState.profile = {
+            name: "Minh Quân",
+            avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150",
+            role: "tasker",
+            phone: "0938 765 432",
+            location: "Quận 3, TP. Hồ Chí Minh",
+            taskerProfile: {
+              skills: ["repair", "helper"],
+              bio: "Mình có 2 năm kinh nghiệm sửa chữa điện nước và phụ việc nhà, làm cẩn thận và đúng giờ.",
+              availability: "all-day",
+              vehicle: "motorbike",
+              verified: false,
+            },
+          };
+        }
+        enterDashboard();
+      }
+
+      function handleLoginSubmit(event) {
+        event.preventDefault();
+        // Demo: số điện thoại/ mật khẩu tự do -> đăng nhập như Seeker mẫu
+        showToast("Số điện thoại demo chưa có trong hệ thống. Đang đăng nhập với hồ sơ mẫu...", "info");
+        quickLogin("seeker");
+      }
+
+      // ==================== AUTH: ĐĂNG KÝ ====================
+      function selectSignupRole(role) {
+        pendingSignupRole = role;
+        const tag = document.getElementById("signup-basic-role-tag");
+        if (role === "seeker") {
+          tag.textContent = "Đăng ký: Người thuê (Seeker)";
+          tag.className = "text-[11px] text-brand-orange font-bold";
+        } else {
+          tag.textContent = "Đăng ký: Người nhận việc (Tasker)";
+          tag.className = "text-[11px] text-brand-teal font-bold";
+        }
+        document.getElementById("signup-basic-submit-btn").className =
+          role === "seeker"
+            ? "w-full bg-brand-stoneDark text-white text-sm font-bold py-3.5 rounded-2xl shadow-md active:scale-[0.98] transition-transform flex items-center justify-center space-x-2"
+            : "w-full bg-brand-teal text-white text-sm font-bold py-3.5 rounded-2xl shadow-md active:scale-[0.98] transition-transform flex items-center justify-center space-x-2";
+        goToScreen("screen-signup-basic");
+      }
+
+      function handleSignupBasicSubmit(event) {
+        event.preventDefault();
+        const name = document.getElementById("signup-name").value.trim();
+        const phone = document.getElementById("signup-phone").value.trim();
+        const location = document.getElementById("signup-location").value.trim();
+
+        window.GiGoodState.profile = {
+          name: name,
+          avatar: `https://placehold.co/150x150/${pendingSignupRole === "seeker" ? "ea580c" : "0f766e"}/ffffff?text=${encodeURIComponent(name.substring(0, 2).toUpperCase())}`,
+          role: pendingSignupRole,
+          phone: phone,
+          location: location,
+          taskerProfile: null,
+        };
+
+        if (pendingSignupRole === "seeker") {
+          // Seeker xong 1 bước là vào thẳng app
+          window.GiGoodState.jobs.forEach((j) => {
+            if (j.status !== "assigned") j.seekerName = name;
+          });
+          enterDashboard();
+        } else {
+          // Tasker cần thêm bước xây dựng hồ sơ năng lực (chân dung Tasker)
+          goToScreen("screen-signup-tasker-profile");
+        }
+      }
+
+      function toggleSkillTag(btnEl) {
+        const isActive = btnEl.classList.contains("ring-2");
+        if (isActive) {
+          btnEl.classList.remove("border-brand-teal", "bg-brand-tealLight", "ring-2", "ring-brand-teal/30");
+          btnEl.classList.add("border-brand-stoneBorder");
+          btnEl.querySelector("i").classList.replace("text-brand-teal", "text-gray-400");
+        } else {
+          btnEl.classList.remove("border-brand-stoneBorder");
+          btnEl.classList.add("border-brand-teal", "bg-brand-tealLight", "ring-2", "ring-brand-teal/30");
+          btnEl.querySelector("i").classList.replace("text-gray-400", "text-brand-teal");
+        }
+      }
+
+      function handleSignupTaskerSubmit(event) {
+        event.preventDefault();
+
+        const skillButtons = document.querySelectorAll("#tasker-skill-grid .skill-tag-btn.border-brand-teal");
+        const skills = Array.from(skillButtons).map((b) => b.getAttribute("data-skill"));
+
+        if (skills.length === 0) {
+          showToast("Vui lòng chọn ít nhất 1 lĩnh vực bạn mạnh.", "error");
+          return;
+        }
+
+        const bio = document.getElementById("tasker-signup-bio").value.trim();
+        const availability = document.getElementById("tasker-signup-availability").value;
+        const vehicle = document.getElementById("tasker-signup-vehicle").value;
+
+        window.GiGoodState.profile.taskerProfile = {
+          skills: skills,
+          bio: bio || "Tasker mới gia nhập GiGood, sẵn sàng nhận việc trong khu vực.",
+          availability: availability,
+          vehicle: vehicle,
+          verified: false,
+        };
+
+        enterDashboard();
+      }
+
+      function enterDashboard() {
+        goToScreen("screen-main-app");
+
+        document.getElementById("user-name-head") &&
+          (document.getElementById("user-name-head").innerText = window.GiGoodState.profile.name);
+        document.getElementById("user-avatar-head").src = window.GiGoodState.profile.avatar;
+
+        switchUserRole(window.GiGoodState.profile.role);
+
+        pushNotification(`Chào mừng ${window.GiGoodState.profile.name} đến với GiGood!`);
+        showToast("Đăng nhập thành công!", "success");
+      }
+
+      function logOutAndReset() {
+        goToScreen("screen-welcome");
+        showToast("Đã đăng xuất khỏi tài khoản.");
+      }
+
+      // ==================== NOTIFICATION SYSTEM ====================
+      function pushNotification(text) {
+        window.GiGoodState.notifications.unshift({
+          id: Date.now(),
+          text: text,
+          time: "Vừa xong",
+          read: false,
+        });
+        renderNotifications();
+        document.getElementById("notif-badge").classList.remove("hidden");
+      }
+
+      function renderNotifications() {
+        const list = document.getElementById("notif-list");
+        if (!list) return;
+        if (window.GiGoodState.notifications.length === 0) {
+          list.innerHTML = `<p class="text-gray-400 text-center py-4">Không có thông báo mới nào.</p>`;
+          return;
+        }
+        list.innerHTML = window.GiGoodState.notifications
+          .map(
+            (n) => `
+            <div class="flex items-start space-x-2.5 pb-2.5 border-b border-gray-50 last:border-0 last:pb-0">
+              <span class="w-7 h-7 rounded-full bg-brand-orangeLight text-brand-orange flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">
+                <i class="fa-solid fa-bell"></i>
+              </span>
+              <div class="flex-1">
+                <p class="text-gray-700 leading-snug">${n.text}</p>
+                <p class="text-[10px] text-gray-400 mt-0.5">${n.time}</p>
+              </div>
+            </div>`,
+          )
+          .join("");
+      }
+
+      function toggleNotificationCenter() {
+        document.getElementById("notif-tray").classList.toggle("hidden");
+      }
+
+      function clearNotifications() {
+        window.GiGoodState.notifications = [];
+        renderNotifications();
+        document.getElementById("notif-badge").classList.add("hidden");
+      }
+
+      // ==================== ROLE SWITCH (mô phỏng song vai) ====================
+      function switchUserRole(role) {
+        window.GiGoodState.currentUserRole = role;
+        document.getElementById("notif-tray").classList.add("hidden");
+
+        const seekerWs = document.getElementById("seeker-workspace");
+        const taskerWs = document.getElementById("tasker-workspace");
+        const seekerTabbar = document.getElementById("seeker-tabbar");
+        const taskerTabbar = document.getElementById("tasker-tabbar");
+        const toggleSeeker = document.getElementById("toggle-seeker");
+        const toggleTasker = document.getElementById("toggle-tasker");
+        const roleBadge = document.getElementById("role-badge");
+        const walletTitle = document.getElementById("wallet-title");
+
+        if (role === "seeker") {
+          seekerWs.classList.remove("hidden");
+          taskerWs.classList.add("hidden");
+          seekerTabbar.classList.remove("hidden");
+          taskerTabbar.classList.add("hidden");
+
+          toggleSeeker.className = "flex-1 py-2 rounded-lg text-[11px] font-extrabold transition-all flex items-center justify-center space-x-1.5 bg-white text-brand-orange shadow-sm";
+          toggleTasker.className = "flex-1 py-2 rounded-lg text-[11px] font-extrabold transition-all flex items-center justify-center space-x-1.5 text-gray-500";
+
+          roleBadge.textContent = "Seeker";
+          roleBadge.className = "bg-brand-orangeLight text-brand-orange text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide";
+          walletTitle.textContent = `Ví của ${firstName()}`;
+
+          seekerSwitchSubTab(window.GiGoodState.seekerSubTab || "create");
+        } else {
+          seekerWs.classList.add("hidden");
+          taskerWs.classList.remove("hidden");
+          seekerTabbar.classList.add("hidden");
+          taskerTabbar.classList.remove("hidden");
+
+          toggleTasker.className = "flex-1 py-2 rounded-lg text-[11px] font-extrabold transition-all flex items-center justify-center space-x-1.5 bg-white text-brand-teal shadow-sm";
+          toggleSeeker.className = "flex-1 py-2 rounded-lg text-[11px] font-extrabold transition-all flex items-center justify-center space-x-1.5 text-gray-500";
+
+          roleBadge.textContent = "Tasker";
+          roleBadge.className = "bg-brand-tealLight text-brand-teal text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide";
+          walletTitle.textContent = `Ví của ${firstName()}`;
+
+          taskerSwitchSubTab(window.GiGoodState.taskerSubTab || "board");
+        }
+
+        refreshAllDashboards();
+        renderProfileScreen();
+      }
+
+      function firstName() {
+        const n = window.GiGoodState.profile.name || "bạn";
+        const parts = n.trim().split(" ");
+        return parts[parts.length - 1];
+      }
+
+      // ==================== SEEKER SUB-TAB NAV ====================
+      function seekerSwitchSubTab(tab) {
+        window.GiGoodState.seekerSubTab = tab;
+        document.querySelectorAll(".seeker-sub-screen").forEach((el) => el.classList.add("hidden"));
+        document.getElementById(`seeker-sub-${tab}`).classList.remove("hidden");
+
+        ["create", "jobs", "chat", "history"].forEach((t) => {
+          const btn = document.getElementById(`seeker-tab-${t}`);
+          btn.className =
+            t === tab
+              ? "flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-brand-orange relative"
+              : "flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-gray-400 relative";
+        });
+
+        if (tab === "chat") {
+          document.getElementById("seeker-chat-dot").classList.add("hidden");
+          renderSeekerChatSidebar();
+        }
+      }
+
+      // ==================== TASKER SUB-TAB NAV ====================
+      function taskerSwitchSubTab(tab) {
+        window.GiGoodState.taskerSubTab = tab;
+        document.querySelectorAll(".tasker-sub-screen").forEach((el) => el.classList.add("hidden"));
+        document.getElementById(`tasker-sub-${tab}`).classList.remove("hidden");
+
+        ["board", "active", "chat", "earnings"].forEach((t) => {
+          const btn = document.getElementById(`tasker-tab-${t}`);
+          btn.className =
+            t === tab
+              ? "flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-brand-teal relative"
+              : "flex-1 py-2.5 flex flex-col items-center space-y-1 tab-transition text-gray-400 relative";
+        });
+
+        if (tab === "chat") {
+          document.getElementById("tasker-chat-dot").classList.add("hidden");
+          renderTaskerChatSidebar();
+        }
+      }
+
+      // ==================== GLOBAL RENDER DISPATCHER ====================
+      function refreshAllDashboards() {
+        renderHeaderStats();
+        renderSeekerActiveJobs();
+        renderSeekerHistory();
+        renderTaskerAvailableJobs();
+        renderTaskerAssignedJobs();
+        renderTaskerEarnings();
+        renderSeekerChatSidebar();
+        renderTaskerChatSidebar();
+        if (window.GiGoodState.activeChatId) {
+          renderSeekerChatConversation();
+          renderTaskerChatConversation();
+        }
+        updateTabBadges();
+      }
+
+      function renderHeaderStats() {
+        document.getElementById("global-escrow-balance").innerText =
+          formatVND(window.GiGoodState.escrowHeldPool);
+        const balance =
+          window.GiGoodState.currentUserRole === "seeker"
+            ? window.GiGoodState.seekerWallet
+            : window.GiGoodState.taskerWallet;
+        document.getElementById("global-wallet-balance").innerText = formatVND(balance);
+      }
+
+      function updateTabBadges() {
+        const activeCount = window.GiGoodState.jobs.filter(
+          (j) => j.status === "finding" || j.status === "assigned",
+        ).length;
+        const seekerBadge = document.getElementById("seeker-jobs-badge");
+        if (activeCount > 0) {
+          seekerBadge.textContent = activeCount;
+          seekerBadge.classList.remove("hidden");
+        } else {
+          seekerBadge.classList.add("hidden");
+        }
+
+        const availableCount = window.GiGoodState.jobs.filter((j) => j.status === "finding").length;
+        const taskerBadge = document.getElementById("tasker-jobs-badge");
+        const assignedCount = window.GiGoodState.jobs.filter((j) => j.status === "assigned").length;
+        if (assignedCount > 0) {
+          taskerBadge.textContent = assignedCount;
+          taskerBadge.classList.remove("hidden");
+        } else {
+          taskerBadge.classList.add("hidden");
+        }
+      }
+
+      function formatVND(num) {
+        return num.toLocaleString("vi-VN") + " VND";
+      }
+
+      // ==================== SEEKER: ĐĂNG VIỆC ====================
+      function applyJobTemplate(category, title, budget) {
+        document.getElementById("job-category").value = category;
+        document.getElementById("job-title").value = title;
+        document.getElementById("job-budget").value = budget;
+        showToast("Đã áp dụng mẫu việc. Bạn có thể chỉnh sửa thêm.", "info");
+      }
+
+      function handlePostJob(event) {
+        event.preventDefault();
+
+        const title = document.getElementById("job-title").value.trim();
+        const category = document.getElementById("job-category").value;
+        const description = document.getElementById("job-desc").value.trim();
+        const budget = parseInt(document.getElementById("job-budget").value, 10);
+        const location = document.getElementById("job-location").value.trim();
+        const urgency = document.getElementById("job-urgency").value;
+
+        if (!title || !description || !budget || !location) {
+          showToast("Vui lòng điền đầy đủ thông tin bắt buộc.", "error");
+          return;
+        }
+
+        const newJob = {
+          id: nextJobId++,
+          title: title + (urgency === "urgent" ? " (Cần liền)" : ""),
+          category: category,
+          budget: budget,
+          location: location,
+          description: description,
+          status: "finding",
+          seekerName: window.GiGoodState.profile.name || "Khách hàng",
+          taskerName: null,
+          timeTag: "Vừa đăng",
+          chats: [],
+          seekerRating: null,
+          taskerRating: null,
+          isCompletedReportedByTasker: false,
+          mapX: `${20 + Math.floor(Math.random() * 60)}%`,
+          mapY: `${20 + Math.floor(Math.random() * 60)}%`,
+        };
+
+        window.GiGoodState.jobs.unshift(newJob);
+        document.getElementById("job-post-form").reset();
+
+        showToast("Đăng việc thành công! Đang tìm Tasker phù hợp...", "success");
+        seekerSwitchSubTab("jobs");
+        startMatchingSimulation(newJob.id);
+        refreshAllDashboards();
+      }
+
+      // ==================== SEEKER: MÔ PHỎNG GHÉP VIỆC (RADAR) ====================
+      function startMatchingSimulation(jobId) {
+        matchingJobIdRef = jobId;
+        const job = window.GiGoodState.jobs.find((j) => j.id === jobId);
+        if (!job) return;
+
+        document.getElementById("matched-tasker-view").classList.add("hidden");
+        document.getElementById("seeker-matching-panel").classList.remove("hidden");
+        document.getElementById("seeker-matching-job-title").innerText = job.title;
+
+        let seconds = 0;
+        document.getElementById("seeker-searching-timer").innerText = seconds;
+
+        if (matchingTimerInterval) clearInterval(matchingTimerInterval);
+        matchingTimerInterval = setInterval(() => {
+          seconds += 1;
+          const el = document.getElementById("seeker-searching-timer");
+          if (el) el.innerText = seconds;
+          if (seconds >= 4) {
+            clearInterval(matchingTimerInterval);
+            completeMatching(jobId);
+          }
+        }, 800);
+      }
+
+      function completeMatching(jobId) {
+        const job = window.GiGoodState.jobs.find((j) => j.id === jobId);
+        if (!job || job.status !== "finding") return;
+
+        const sampleTaskers = [
+          { name: "Minh Quân T.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150" },
+          { name: "Anh Hào D.", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150" },
+          { name: "Thành Long P.", avatar: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&q=80&w=150" },
+        ];
+        const picked = sampleTaskers[Math.floor(Math.random() * sampleTaskers.length)];
+
+        job.status = "assigned";
+        job.taskerName = picked.name;
+        job.timeTag = "Vừa ghép việc";
+        job.chats.push({
+          sender: "tasker",
+          text: `Chào ${job.seekerName}, mình vừa nhận việc "${job.title.substring(0, 30)}" của bạn. Mình sẽ liên hệ chi tiết hơn ngay đây nhé!`,
+          time: "Bây giờ",
+        });
+
+        window.GiGoodState.escrowHeldPool += job.budget;
+        window.GiGoodState.seekerWallet -= job.budget;
+
+        document.getElementById("seeker-matching-panel").classList.add("hidden");
+        document.getElementById("matched-tasker-avatar").src = picked.avatar;
+        document.getElementById("matched-tasker-name").innerText = picked.name;
+        document.getElementById("matched-tasker-view").classList.remove("hidden");
+
+        pushNotification(`${picked.name} đã nhận việc "${job.title.substring(0, 25)}..." của bạn!`);
+        showToast(`Đã ghép việc với ${picked.name}!`, "success");
+
+        refreshAllDashboards();
+      }
+
+      // ==================== SEEKER: DANH SÁCH VIỆC ĐANG XỬ LÝ ====================
+      function renderSeekerActiveJobs() {
+        const list = document.getElementById("seeker-active-jobs-list");
+        const countText = document.getElementById("seeker-active-jobs-count-text");
+        if (!list) return;
+
+        const activeJobs = window.GiGoodState.jobs.filter(
+          (j) => j.status === "finding" || j.status === "assigned",
+        );
+        countText.innerText = `${activeJobs.length} việc`;
+
+        if (activeJobs.length === 0) {
+          list.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">Bạn chưa có việc nào đang xử lý. Hãy đăng việc mới!</p>`;
+          return;
+        }
+
+        list.innerHTML = activeJobs
+          .map((job) => {
+            const meta = CATEGORY_META[job.category] || CATEGORY_META.helper;
+            const statusBadge =
+              job.status === "finding"
+                ? `<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Đang tìm Tasker</span>`
+                : job.isCompletedReportedByTasker
+                  ? `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Tasker đã báo xong</span>`
+                  : `<span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Đang thực hiện</span>`;
+
+            const actionBtn = job.isCompletedReportedByTasker
+              ? `<button onclick="openCompletionModal(${job.id})" class="w-full bg-brand-teal text-white text-xs font-bold py-2.5 rounded-xl mt-2">Xác nhận &amp; Giải ngân</button>`
+              : job.status === "assigned"
+                ? `<button onclick="window.GiGoodState.activeChatId=${job.id}; seekerSwitchSubTab('chat'); seekerOpenChatDetail();" class="w-full bg-stone-100 text-gray-600 text-xs font-bold py-2.5 rounded-xl mt-2">Mở trò chuyện</button>`
+                : "";
+
+            return `
+              <div class="bg-white border border-brand-stoneBorder rounded-2xl p-3.5 space-y-2.5">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-8 h-8 rounded-lg bg-brand-orangeLight text-brand-orange flex items-center justify-center text-xs flex-shrink-0">
+                      <i class="fa-solid ${meta.icon}"></i>
+                    </span>
+                    <div class="min-w-0">
+                      <p class="font-bold text-xs text-gray-800 leading-tight">${job.title}</p>
+                      <p class="text-[10px] text-gray-400">${job.timeTag}</p>
+                    </div>
+                  </div>
+                  ${statusBadge}
+                </div>
+                <p class="text-[11px] text-gray-500 leading-relaxed">${job.description}</p>
+                <div class="flex items-center justify-between text-[11px] pt-1 border-t border-gray-50">
+                  <span class="text-gray-500"><i class="fa-solid fa-location-dot mr-1"></i>${job.location}</span>
+                  <span class="font-bold text-brand-teal">${formatVND(job.budget)}</span>
+                </div>
+                ${job.taskerName ? `<p class="text-[11px] text-gray-600"><i class="fa-solid fa-user mr-1 text-gray-400"></i>Tasker: <span class="font-bold">${job.taskerName}</span></p>` : ""}
+                ${actionBtn}
+              </div>`;
+          })
+          .join("");
+      }
+
+      // ==================== SEEKER: LỊCH SỬ ====================
+      function renderSeekerHistory() {
+        const list = document.getElementById("seeker-history-list");
+        if (!list) return;
+
+        const completed = window.GiGoodState.jobs.filter((j) => j.status === "completed");
+        if (completed.length === 0) {
+          list.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">Chưa có giao dịch nào hoàn tất.</p>`;
+          return;
+        }
+
+        list.innerHTML = completed
+          .map(
+            (job) => `
+            <div class="bg-white border border-brand-stoneBorder rounded-2xl p-3.5 space-y-1.5">
+              <div class="flex items-start justify-between">
+                <p class="font-bold text-xs text-gray-800 leading-tight pr-2">${job.title}</p>
+                <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex-shrink-0">Hoàn thành</span>
+              </div>
+              <p class="text-[11px] text-gray-500">Tasker: ${job.taskerName || "—"}</p>
+              <div class="flex items-center justify-between text-[11px] pt-1 border-t border-gray-50">
+                <span class="text-amber-500 font-bold">${job.seekerRating ? "★".repeat(job.seekerRating) : "Chưa đánh giá"}</span>
+                <span class="font-bold text-gray-800">-${formatVND(job.budget)}</span>
+              </div>
+            </div>`,
+          )
+          .join("");
+      }
+
+      // ==================== SEEKER: MODAL HOÀN THÀNH & GIẢI NGÂN ====================
+      function openCompletionModal(jobId) {
+        const job = window.GiGoodState.jobs.find((j) => j.id === jobId);
+        if (!job) return;
+
+        currentCompletingJobIdRef = jobId;
+        selectedStarRating = 5;
+
+        document.getElementById("modal-payment-title").innerText =
+          `Tasker ${job.taskerName} báo đã hoàn thành "${job.title.substring(0, 30)}". Giải ngân ký quỹ và đánh giá nhé.`;
+        document.getElementById("modal-release-amount").innerText = formatVND(job.budget);
+        renderStarRow("modal-rating-stars-row", selectedStarRating, (n) => {
+          selectedStarRating = n;
+          renderStarRow("modal-rating-stars-row", selectedStarRating, arguments[1]);
+        });
+        document.getElementById("modal-rating-comment").value = "";
+        document.getElementById("completion-modal").classList.remove("hidden");
+      }
+
+      function closeCompletionModal() {
+        document.getElementById("completion-modal").classList.add("hidden");
+      }
+
+      function confirmReleaseEscrow() {
+        const job = window.GiGoodState.jobs.find((j) => j.id === currentCompletingJobIdRef);
+        if (!job) return;
+
+        job.status = "completed";
+        job.seekerRating = selectedStarRating;
+
+        window.GiGoodState.escrowHeldPool -= job.budget;
+        window.GiGoodState.taskerWallet += job.budget;
+
+        closeCompletionModal();
+        pushNotification(`Bạn đã giải ngân ${formatVND(job.budget)} cho ${job.taskerName}.`);
+        showToast("Đã giải ngân và gửi đánh giá thành công!", "success");
+        seekerSwitchSubTab("history");
+        refreshAllDashboards();
+      }
+
+      function renderStarRow(containerId, current, onPick) {
+        const row = document.getElementById(containerId);
+        if (!row) return;
+        row.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const star = document.createElement("button");
+          star.type = "button";
+          star.innerHTML = `<i class="fa-solid fa-star"></i>`;
+          star.className = i <= current ? "text-amber-400" : "text-gray-200";
+          star.onclick = () => {
+            if (containerId === "modal-rating-stars-row") {
+              selectedStarRating = i;
+              renderStarRow(containerId, selectedStarRating, onPick);
+            } else {
+              selectedTaskerStarRating = i;
+              renderStarRow(containerId, selectedTaskerStarRating, onPick);
+            }
+          };
+          row.appendChild(star);
+        }
+      }
+
+      // ==================== TASKER: BẢNG VIỆC + MAP ====================
+      function renderTaskerAvailableJobs() {
+        const list = document.getElementById("tasker-available-jobs-list");
+        const countEl = document.getElementById("tasker-available-jobs-count");
+        const markersBox = document.getElementById("dynamic-map-markers");
+        if (!list) return;
+
+        const available = window.GiGoodState.jobs.filter((j) => j.status === "finding");
+        countEl.innerText = `${available.length} việc`;
+
+        if (available.length === 0) {
+          list.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">Hiện chưa có việc mới gần bạn. Hãy quay lại sau!</p>`;
+          markersBox.innerHTML = "";
+          return;
+        }
+
+        list.innerHTML = available
+          .map((job) => {
+            const meta = CATEGORY_META[job.category] || CATEGORY_META.helper;
+            return `
+              <div class="bg-white border border-brand-stoneBorder rounded-2xl p-3.5 space-y-2.5">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-8 h-8 rounded-lg bg-brand-tealLight text-brand-teal flex items-center justify-center text-xs flex-shrink-0">
+                      <i class="fa-solid ${meta.icon}"></i>
+                    </span>
+                    <div class="min-w-0">
+                      <p class="font-bold text-xs text-gray-800 leading-tight">${job.title}</p>
+                      <p class="text-[10px] text-gray-400">${meta.label} · ${job.timeTag}</p>
+                    </div>
+                  </div>
+                  <span class="font-bold text-xs text-brand-teal flex-shrink-0">${formatVND(job.budget)}</span>
+                </div>
+                <p class="text-[11px] text-gray-500 leading-relaxed">${job.description}</p>
+                <p class="text-[11px] text-gray-500"><i class="fa-solid fa-location-dot mr-1 text-gray-400"></i>${job.location}</p>
+                <button onclick="taskerAcceptJob(${job.id})" class="w-full bg-brand-teal text-white text-xs font-bold py-2.5 rounded-xl">Nhận việc này</button>
+              </div>`;
+          })
+          .join("");
+
+        markersBox.innerHTML = available
+          .map(
+            (job) => `
+            <div class="absolute" style="left:${job.mapX}; top:${job.mapY};" title="${job.title}">
+              <span class="relative flex items-center justify-center w-7 h-7 -ml-3.5 -mt-3.5 rounded-full bg-brand-orange text-white text-[10px] shadow-md border-2 border-white">
+                <i class="fa-solid ${(CATEGORY_META[job.category] || CATEGORY_META.helper).icon}"></i>
+              </span>
+            </div>`,
+          )
+          .join("");
+      }
+
+      function taskerAcceptJob(jobId) {
+        const job = window.GiGoodState.jobs.find((j) => j.id === jobId);
+        if (!job || job.status !== "finding") return;
+
+        job.status = "assigned";
+        job.taskerName = window.GiGoodState.profile.name || "Bạn";
+        job.timeTag = "Vừa nhận";
+        job.chats.push({
+          sender: "tasker",
+          text: `Chào ${job.seekerName}, mình vừa nhận việc "${job.title.substring(0, 30)}" của bạn. Mình sẽ liên hệ chi tiết hơn ngay đây nhé!`,
+          time: "Bây giờ",
+        });
+
+        window.GiGoodState.escrowHeldPool += job.budget;
+
+        pushNotification(`Bạn đã nhận việc "${job.title.substring(0, 25)}..."`);
+        showToast("Nhận việc thành công! Hãy liên hệ với khách hàng.", "success");
+        taskerSwitchSubTab("active");
+        refreshAllDashboards();
+      }
+
+      // ==================== TASKER: VIỆC ĐÃ NHẬN ====================
+      function renderTaskerAssignedJobs() {
+        const list = document.getElementById("tasker-assigned-jobs-list");
+        if (!list) return;
+
+        const assigned = window.GiGoodState.jobs.filter(
+          (j) => j.status === "assigned" && (j.taskerName || "").length > 0,
+        );
+
+        if (assigned.length === 0) {
+          list.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">Bạn chưa nhận việc nào. Vào "Bảng việc" để xem các việc gần bạn!</p>`;
+          return;
+        }
+
+        list.innerHTML = assigned
+          .map((job) => {
+            const meta = CATEGORY_META[job.category] || CATEGORY_META.helper;
+            const actionBtn = job.isCompletedReportedByTasker
+              ? `<span class="w-full block text-center text-[11px] font-bold text-amber-600 bg-amber-50 py-2 rounded-xl">Đã báo hoàn thành — đang chờ khách xác nhận</span>`
+              : `<button onclick="taskerReportComplete(${job.id})" class="w-full bg-brand-orange text-white text-xs font-bold py-2.5 rounded-xl">Báo đã hoàn thành</button>`;
+
+            return `
+              <div class="bg-white border border-brand-stoneBorder rounded-2xl p-3.5 space-y-2.5">
+                <div class="flex items-center space-x-2">
+                  <span class="w-8 h-8 rounded-lg bg-brand-tealLight text-brand-teal flex items-center justify-center text-xs flex-shrink-0">
+                    <i class="fa-solid ${meta.icon}"></i>
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="font-bold text-xs text-gray-800 leading-tight">${job.title}</p>
+                    <p class="text-[10px] text-gray-400">Khách: ${job.seekerName}</p>
+                  </div>
+                  <span class="font-bold text-xs text-brand-teal flex-shrink-0">${formatVND(job.budget)}</span>
+                </div>
+                <p class="text-[11px] text-gray-500"><i class="fa-solid fa-location-dot mr-1 text-gray-400"></i>${job.location}</p>
+                <div class="flex gap-2">
+                  <button onclick="window.GiGoodState.activeChatId=${job.id}; taskerSwitchSubTab('chat'); taskerOpenChatDetail();" class="flex-1 bg-stone-100 text-gray-600 text-xs font-bold py-2.5 rounded-xl">Trò chuyện</button>
+                </div>
+                ${actionBtn}
+              </div>`;
+          })
+          .join("");
+      }
+
+      function taskerReportComplete(jobId) {
+        const job = window.GiGoodState.jobs.find((j) => j.id === jobId);
+        if (!job) return;
+
+        job.isCompletedReportedByTasker = true;
+        pushNotification(`Bạn đã báo hoàn thành việc "${job.title.substring(0, 25)}..."`);
+        showToast("Đã báo hoàn thành! Đang chờ khách xác nhận và giải ngân.", "success");
+
+        // Mở luôn modal đánh giá khách hàng từ phía Tasker
+        currentRatingJobIdRef = jobId;
+        selectedTaskerStarRating = 5;
+        renderStarRow("tasker-rating-stars-row", selectedTaskerStarRating);
+        document.getElementById("tasker-rating-comment").value = "";
+        document.getElementById("tasker-rating-modal").classList.remove("hidden");
+
+        refreshAllDashboards();
+      }
+
+      function closeTaskerRatingModal() {
+        document.getElementById("tasker-rating-modal").classList.add("hidden");
+      }
+
+      function confirmTaskerRating() {
+        const job = window.GiGoodState.jobs.find((j) => j.id === currentRatingJobIdRef);
+        if (job) {
+          job.taskerRating = selectedTaskerStarRating;
+          showToast("Đã gửi đánh giá khách hàng. Cảm ơn bạn!", "success");
+        }
+        closeTaskerRatingModal();
+      }
+
+      // ==================== TASKER: THU NHẬP ====================
+      function renderTaskerEarnings() {
+        const completed = window.GiGoodState.jobs.filter(
+          (j) => j.status === "completed" && j.taskerName,
+        );
+        const total = completed.reduce((sum, j) => sum + j.budget, 0);
+
+        const earningsEl = document.getElementById("tasker-stat-earnings");
+        const countEl = document.getElementById("tasker-stat-count");
+        if (earningsEl) earningsEl.innerText = formatVND(total);
+        if (countEl) countEl.innerText = completed.length;
+
+        const tableBody = document.getElementById("tasker-earnings-table-body");
+        if (!tableBody) return;
+
+        if (completed.length === 0) {
+          tableBody.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">Chưa có lịch sử nhận tiền nào.</p>`;
+          return;
+        }
+
+        tableBody.innerHTML = completed
+          .map(
+            (job) => `
+            <div class="bg-white border border-brand-stoneBorder rounded-2xl p-3.5 flex items-center justify-between">
+              <div class="min-w-0 pr-2">
+                <p class="font-bold text-xs text-gray-800 leading-tight truncate">${job.title}</p>
+                <p class="text-[10px] text-gray-400">Khách: ${job.seekerName}</p>
+              </div>
+              <span class="font-bold text-xs text-emerald-600 flex-shrink-0">+${formatVND(job.budget)}</span>
+            </div>`,
+          )
+          .join("");
+      }
+
+      // ==================== CHAT: SEEKER ====================
+      function renderSeekerChatSidebar() {
+        const sidebar = document.getElementById("seeker-chat-sidebar");
+        if (!sidebar) return;
+
+        const chatJobs = window.GiGoodState.jobs.filter(
+          (j) => j.status === "assigned" || j.status === "completed",
+        );
+
+        if (chatJobs.length === 0) {
+          sidebar.innerHTML = `<p class="text-xs text-gray-400 text-center py-10 px-4">Chưa có cuộc trò chuyện nào. Khi có Tasker nhận việc, bạn có thể chat tại đây.</p>`;
+          return;
+        }
+
+        sidebar.innerHTML = chatJobs
+          .map((job) => {
+            const lastMsg = job.chats[job.chats.length - 1];
+            return `
+              <button onclick="window.GiGoodState.activeChatId=${job.id}; seekerOpenChatDetail();" class="w-full text-left p-3.5 flex items-center space-x-3 active:bg-stone-50">
+                <img class="w-11 h-11 rounded-full object-cover border flex-shrink-0" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150" />
+                <div class="flex-1 min-w-0">
+                  <p class="font-bold text-xs text-gray-800 truncate">${job.taskerName}</p>
+                  <p class="text-[11px] text-gray-400 truncate">${lastMsg ? lastMsg.text : "Bắt đầu trò chuyện..."}</p>
+                </div>
+              </button>`;
+          })
+          .join("");
+      }
+
+      function seekerOpenChatDetail() {
+        document.getElementById("seeker-chat-list-view").classList.add("hidden");
+        document.getElementById("seeker-chat-detail-view").classList.remove("hidden");
+        renderSeekerChatConversation();
+      }
+
+      function seekerCloseChatDetail() {
+        document.getElementById("seeker-chat-detail-view").classList.add("hidden");
+        document.getElementById("seeker-chat-list-view").classList.remove("hidden");
+      }
+
+      function renderSeekerChatConversation() {
+        const chatId = window.GiGoodState.activeChatId;
+        const noneSelected = document.getElementById("seeker-chat-none-selected");
+        const activeBox = document.getElementById("seeker-chat-active-box");
+        if (!noneSelected || !activeBox) return;
+
+        const job = window.GiGoodState.jobs.find((j) => j.id === chatId);
+        if (!job) {
+          noneSelected.classList.remove("hidden");
+          activeBox.classList.add("hidden");
+          return;
+        }
+
+        noneSelected.classList.add("hidden");
+        activeBox.classList.remove("hidden");
+
+        document.getElementById("seeker-chat-header-name").innerText = job.taskerName || "Tasker";
+        document.getElementById("seeker-chat-job-tag").innerText = `Việc: ${job.title.substring(0, 22)}...`;
+        document.getElementById("seeker-chat-header-avatar").src =
+          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150";
+
+        const thread = document.getElementById("seeker-chat-thread");
+        thread.innerHTML = "";
+
+        job.chats.forEach((msg) => {
+          const isMe = msg.sender === "seeker";
+          const outerDiv = document.createElement("div");
+          if (isMe) {
+            outerDiv.className = "flex items-start justify-end max-w-[85%] ml-auto text-xs";
+            outerDiv.innerHTML = `
+                <div class="text-right">
+                  <div class="bg-brand-orange text-white p-3 rounded-2xl rounded-tr-none shadow-sm text-left leading-relaxed">${msg.text}</div>
+                  <span class="text-[9px] text-gray-400 mt-1 inline-block">${msg.time}</span>
+                </div>`;
+          } else {
+            outerDiv.className = "flex items-start space-x-2 max-w-[85%] text-xs";
+            outerDiv.innerHTML = `
+                <img class="w-7 h-7 rounded-full object-cover mt-0.5 border flex-shrink-0" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150" alt="" />
+                <div>
+                  <div class="bg-white border border-brand-stoneBorder p-3 rounded-2xl rounded-tl-none shadow-sm text-gray-800 leading-relaxed">${msg.text}</div>
+                  <span class="text-[9px] text-gray-400 mt-1 inline-block">${msg.time}</span>
+                </div>`;
+          }
+          thread.appendChild(outerDiv);
+        });
+
+        thread.scrollTop = thread.scrollHeight;
+      }
+
+      // ==================== CHAT: TASKER ====================
+      function renderTaskerChatSidebar() {
+        const sidebar = document.getElementById("tasker-chat-sidebar");
+        if (!sidebar) return;
+
+        const chatJobs = window.GiGoodState.jobs.filter(
+          (j) => j.status === "assigned" || j.status === "completed",
+        );
+
+        if (chatJobs.length === 0) {
+          sidebar.innerHTML = `<p class="text-xs text-gray-400 text-center py-10 px-4">Chưa có cuộc trò chuyện nào. Khi bạn nhận việc, có thể chat với khách tại đây.</p>`;
+          return;
+        }
+
+        sidebar.innerHTML = chatJobs
+          .map((job) => {
+            const lastMsg = job.chats[job.chats.length - 1];
+            return `
+              <button onclick="window.GiGoodState.activeChatId=${job.id}; taskerOpenChatDetail();" class="w-full text-left p-3.5 flex items-center space-x-3 active:bg-stone-50">
+                <img class="w-11 h-11 rounded-full object-cover border flex-shrink-0" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150" />
+                <div class="flex-1 min-w-0">
+                  <p class="font-bold text-xs text-gray-800 truncate">${job.seekerName}</p>
+                  <p class="text-[11px] text-gray-400 truncate">${lastMsg ? lastMsg.text : "Bắt đầu trò chuyện..."}</p>
+                </div>
+              </button>`;
+          })
+          .join("");
+      }
+
+      function taskerOpenChatDetail() {
+        document.getElementById("tasker-chat-list-view").classList.add("hidden");
+        document.getElementById("tasker-chat-detail-view").classList.remove("hidden");
+        renderTaskerChatConversation();
+      }
+
+      function taskerCloseChatDetail() {
+        document.getElementById("tasker-chat-detail-view").classList.add("hidden");
+        document.getElementById("tasker-chat-list-view").classList.remove("hidden");
+      }
+
+      function renderTaskerChatConversation() {
+        const chatId = window.GiGoodState.activeChatId;
+        const noneSelected = document.getElementById("tasker-chat-none-selected");
+        const activeBox = document.getElementById("tasker-chat-active-box");
+        if (!noneSelected || !activeBox) return;
+
+        const job = window.GiGoodState.jobs.find((j) => j.id === chatId);
+        if (!job) {
+          noneSelected.classList.remove("hidden");
+          activeBox.classList.add("hidden");
+          return;
+        }
+
+        noneSelected.classList.add("hidden");
+        activeBox.classList.remove("hidden");
+
+        document.getElementById("tasker-chat-header-name").innerText = job.seekerName || "Khách hàng";
+        document.getElementById("tasker-chat-job-tag").innerText = `Việc: ${job.title.substring(0, 22)}...`;
+        document.getElementById("tasker-chat-header-avatar").src =
+          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150";
+
+        const thread = document.getElementById("tasker-chat-thread");
+        thread.innerHTML = "";
+
+        job.chats.forEach((msg) => {
+          const isMe = msg.sender === "tasker";
+          const outerDiv = document.createElement("div");
+          if (isMe) {
+            outerDiv.className = "flex items-start justify-end max-w-[85%] ml-auto text-xs";
+            outerDiv.innerHTML = `
+                <div class="text-right">
+                  <div class="bg-brand-teal text-white p-3 rounded-2xl rounded-tr-none shadow-sm text-left leading-relaxed">${msg.text}</div>
+                  <span class="text-[9px] text-gray-400 mt-1 inline-block">${msg.time}</span>
+                </div>`;
+          } else {
+            outerDiv.className = "flex items-start space-x-2 max-w-[85%] text-xs";
+            outerDiv.innerHTML = `
+                <img class="w-7 h-7 rounded-full object-cover mt-0.5 border flex-shrink-0" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150" alt="" />
+                <div>
+                  <div class="bg-white border border-brand-stoneBorder p-3 rounded-2xl rounded-tl-none shadow-sm text-gray-800 leading-relaxed">${msg.text}</div>
+                  <span class="text-[9px] text-gray-400 mt-1 inline-block">${msg.time}</span>
+                </div>`;
+          }
+          thread.appendChild(outerDiv);
+        });
+
+        thread.scrollTop = thread.scrollHeight;
+      }
+
+      // ==================== CHAT: GỬI TIN NHẮN (chung) ====================
+      function handleSendChatMessage(event, role) {
+        event.preventDefault();
+
+        const chatId = window.GiGoodState.activeChatId;
+        const job = window.GiGoodState.jobs.find((j) => j.id === chatId);
+        if (!job) return;
+
+        const inputElement =
+          role === "seeker"
+            ? document.getElementById("seeker-chat-input-field")
+            : document.getElementById("tasker-chat-input-field");
+
+        const text = inputElement.value.trim();
+        if (!text) return;
+
+        job.chats.push({ sender: role, text: text, time: "Bây giờ" });
+        inputElement.value = "";
+        refreshAllDashboards();
+
+        setTimeout(() => {
+          if (window.GiGoodState.currentUserRole !== role) {
+            if (role === "seeker") {
+              document.getElementById("tasker-chat-dot").classList.remove("hidden");
+              pushNotification(`Có tin nhắn mới từ Khách ${job.seekerName}!`);
+              showToast("Có tin nhắn mới từ Khách hàng!");
+            } else {
+              document.getElementById("seeker-chat-dot").classList.remove("hidden");
+              pushNotification(`Có tin nhắn mới từ Tasker ${job.taskerName}!`);
+              showToast("Có tin nhắn mới từ Tasker!");
+            }
+          }
+        }, 1000);
+      }
+
+      // ==================== HỒ SƠ CÁ NHÂN ====================
+      function renderProfileScreen() {
+        const p = window.GiGoodState.profile;
+        if (!p.name) return;
+
+        document.getElementById("profile-avatar-large").src = p.avatar;
+        document.getElementById("profile-name-large").innerText = p.name;
+        document.getElementById("profile-phone-text").innerText = p.phone || "—";
+        document.getElementById("profile-location-text").innerText = p.location || "—";
+
+        const roleTag = document.getElementById("profile-role-tag");
+        const taskerDetails = document.getElementById("profile-tasker-details");
+
+        if (p.role === "tasker" && p.taskerProfile) {
+          roleTag.textContent = "Người Nhận Việc (Tasker)";
+          roleTag.className = "text-xs text-brand-teal font-bold";
+          taskerDetails.classList.remove("hidden");
+
+          document.getElementById("profile-skill-tags").innerHTML = p.taskerProfile.skills
+            .map((s) => {
+              const meta = CATEGORY_META[s] || CATEGORY_META.helper;
+              return `<span class="text-[10px] font-bold text-brand-teal bg-brand-tealLight px-2.5 py-1 rounded-full"><i class="fa-solid ${meta.icon} mr-1"></i>${meta.label}</span>`;
+            })
+            .join("");
+          document.getElementById("profile-bio-text").innerText = p.taskerProfile.bio;
+          document.getElementById("profile-availability-text").innerText =
+            AVAILABILITY_LABEL[p.taskerProfile.availability] || "—";
+          document.getElementById("profile-vehicle-text").innerText =
+            VEHICLE_LABEL[p.taskerProfile.vehicle] || "—";
+        } else {
+          roleTag.textContent = "Người Thuê (Seeker)";
+          roleTag.className = "text-xs text-brand-orange font-bold";
+          taskerDetails.classList.add("hidden");
+        }
+      }
+
+      // ==================== TOAST ====================
+      function showToast(message, type = "info") {
+        const toast = document.getElementById("toast-box");
+        const toastMsg = document.getElementById("toast-message");
+        const toastIcon = document.getElementById("toast-icon");
+
+        toastMsg.innerText = message;
+
+        if (type === "success") {
+          toastIcon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+        } else if (type === "error") {
+          toastIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500"></i>';
+        } else {
+          toastIcon.innerHTML = '<i class="fa-solid fa-circle-info text-brand-orange"></i>';
+        }
+
+        toast.classList.remove("translate-y-20", "opacity-0", "pointer-events-none");
+        setTimeout(() => {
+          toast.classList.add("translate-y-20", "opacity-0", "pointer-events-none");
+        }, 3500);
+      }
+
+      // ==================== INIT ====================
+      window.onload = function () {
+        goToScreen("screen-welcome");
+        renderStarRow("modal-rating-stars-row", selectedStarRating);
+        renderStarRow("tasker-rating-stars-row", selectedTaskerStarRating);
+      };
+    </script>
+  </body>
+</html>
