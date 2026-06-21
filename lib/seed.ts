@@ -13,7 +13,7 @@ export const SEED_JOBS: Job[] = [
   {
     id: 201,
     title: "Khơi thông thoát sàn toilet tràn nước",
-    category: "repair",
+    category: "sua-chua",
     budget: 150000,
     location: "120 Nguyễn Huệ, Phường Bến Nghé, Quận 1",
     description:
@@ -36,7 +36,7 @@ export const SEED_JOBS: Job[] = [
   {
     id: 202,
     title: "Giao gấp hộp bánh ngọt cho khách hàng",
-    category: "delivery",
+    category: "van-chuyen",
     budget: 45000,
     location: "88 Pasteur, Quận 1 đến Quận 3",
     description:

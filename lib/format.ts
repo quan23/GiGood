@@ -1,4 +1,4 @@
-export function formatVND(num: number): string {
+export function formatVnd(num: number): string {
   return num.toLocaleString("vi-VN") + " VND";
 }
 

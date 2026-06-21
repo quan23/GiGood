@@ -1,4 +1,4 @@
-import type { Availability, Category, Vehicle } from "@/types";
+import type { Availability, Vehicle } from "@/types";
 
 export type CategoryMeta = {
   label: string;
@@ -6,11 +6,26 @@ export type CategoryMeta = {
   accent: "orange" | "teal";
 };
 
-export const CATEGORY_META: Record<Category, CategoryMeta> = {
-  repair: { label: "Sửa chữa vặt", icon: "wrench", accent: "orange" },
-  cleaning: { label: "Dọn dẹp nhà cửa", icon: "magic", accent: "teal" },
-  delivery: { label: "Vận chuyển/Giao hàng", icon: "motorcycle", accent: "orange" },
-  helper: { label: "Hỗ trợ/Nhờ việc vặt", icon: "handshake-o", accent: "teal" },
+export const CATEGORIES = [
+  { id: "sua-chua" as const, label: "Sửa chữa vặt" },
+  { id: "don-dep" as const, label: "Dọn dẹp nhà cửa" },
+  { id: "bao-tri" as const, label: "Bảo trì nhà cửa" },
+  { id: "thue-do" as const, label: "Thuê đồ" },
+  { id: "van-chuyen" as const, label: "Vận chuyển / Giao hàng" },
+  { id: "gia-su" as const, label: "Gia sư" },
+  { id: "lao-cong" as const, label: "Lao công" },
+  { id: "khac" as const, label: "Khác" },
+] as const;
+
+export const CATEGORY_META: Record<string, CategoryMeta> = {
+  "sua-chua": { label: "Sửa chữa vặt", icon: "wrench", accent: "orange" },
+  "don-dep": { label: "Dọn dẹp nhà cửa", icon: "magic", accent: "teal" },
+  "bao-tri": { label: "Bảo trì nhà cửa", icon: "home", accent: "orange" },
+  "thue-do": { label: "Thuê đồ", icon: "gift", accent: "teal" },
+  "van-chuyen": { label: "Vận chuyển/Giao hàng", icon: "motorcycle", accent: "orange" },
+  "gia-su": { label: "Gia sư", icon: "book", accent: "teal" },
+  "lao-cong": { label: "Lao công", icon: "handshake-o", accent: "orange" },
+  "khac": { label: "Khác", icon: "ellipsis-h", accent: "teal" },
 };
 
 export const AVAILABILITY_LABEL: Record<Availability, string> = {

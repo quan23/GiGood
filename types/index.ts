@@ -1,6 +1,6 @@
 export type Role = "seeker" | "tasker";
 
-export type Category = "repair" | "cleaning" | "delivery" | "helper";
+export type Category = "sua-chua" | "don-dep" | "bao-tri" | "thue-do" | "van-chuyen" | "gia-su" | "lao-cong" | "khac";
 export type Availability = "all-day" | "morning" | "afternoon" | "evening" | "weekend";
 export type Vehicle = "motorbike" | "car" | "bike" | "none";
 
