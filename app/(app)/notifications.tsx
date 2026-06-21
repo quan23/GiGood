@@ -1,8 +1,7 @@
 import { View, Text, FlatList, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { useGiGood } from "@/lib/GiGoodContext";
+import { EmptyState } from "../../components/shared/EmptyState";
+import { useGiGood } from "../../lib/GiGoodContext";
 
 export default function NotificationsScreen() {
   const { state, dispatch } = useGiGood();

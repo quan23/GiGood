@@ -23,7 +23,7 @@ export function MatchingOverlay({ visible, onDismiss }: Props) {
       anim.stop();
       clearTimeout(timer);
     };
-  }, [visible]);
+  }, [visible, dotAnim, onDismiss]);
 
   const dotsOpacity = dotAnim.interpolate({
     inputRange: [0, 1],

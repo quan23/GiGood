@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import type { Category } from "@/types";
-import { CATEGORIES } from "@/lib/categories";
+import type { Category } from "../../types";
+import { CATEGORY_META } from "../../lib/categories";
 
 interface Props {
   selected?: Category[];
@@ -19,35 +19,20 @@ const ICONS: Record<string, string> = {
   "khac": "\u{1F4AC}",
 };
 
-interface CatButtonProps {
-  cat: (typeof CATEGORIES)[number];
-  isSelected: boolean;
-  onPress: () => void;
-}
-
-function CatButton({ cat, isSelected, onPress }: CatButtonProps) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      className={`items-center justify-center rounded-2xl p-3 border-2 ${isSelected ? "border-green-500 bg-green-50" : "border-gray-200 bg-white"}`}
-      activeOpacity={0.7}
-    >
-      <Text className="text-2xl mb-1">{ICONS[cat.id] ?? ICONS["khac"]}</Text>
-      <Text className={`text-xs font-medium text-center ${isSelected ? "text-green-700" : "text-gray-600"}`}>{cat.label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 export function CategoryGrid({ selected = [], onSelect, multiple = true }: Props) {
+  const entries = Object.entries(CATEGORY_META) as [Category, { label: string; icon: string }][]
   return (
     <View className="flex-row flex-wrap px-4">
-      {CATEGORIES.map(cat => (
-        <View key={cat.id} className="w-1/4 p-1.5">
-          <CatButton
-            cat={cat}
-            isSelected={selected.some(s => s === cat.id)}
-            onPress={() => onSelect(cat.id)}
-          />
+      {entries.map(([key, meta]) => (
+        <View key={key} className="w-1/4 p-1.5">
+          <TouchableOpacity
+            onPress={() => onSelect(key)}
+            className={`items-center justify-center rounded-2xl p-3 border-2 ${selected.includes(key) ? "border-green-500 bg-green-50" : "border-gray-200 bg-white"}`}
+            activeOpacity={0.7}
+          >
+            <Text className="text-2xl mb-1">{ICONS[key] ?? ICONS["khac"]}</Text>
+            <Text className={`text-xs font-medium text-center ${selected.includes(key) ? "text-green-700" : "text-gray-600"}`}>{meta.label}</Text>
+          </TouchableOpacity>
         </View>
       ))}
     </View>

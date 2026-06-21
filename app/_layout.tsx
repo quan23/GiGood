@@ -1,8 +1,8 @@
-import "../global.css";
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { GiGoodProvider } from "@/lib/GiGoodContext";
-import { Toast } from "@/components/ui/Toast";
+import '../global.css'
+import { Stack } from 'expo-router'
+import { StatusBar } from 'expo-status-bar'
+import { GiGoodProvider } from '../lib/GiGoodContext'
+import { Toast } from '../components/ui/Toast'
 
 export default function RootLayout() {
   return (
@@ -14,5 +14,5 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <Toast />
     </GiGoodProvider>
-  );
+  )
 }

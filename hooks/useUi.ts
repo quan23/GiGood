@@ -1,30 +1,37 @@
-import { useCallback } from "react";
-import { useGiGood } from "@/lib/GiGoodContext";
-import type { ToastVariant, SeekerSubTab, TaskerSubTab } from "@/types";
+import { useCallback } from 'react'
+import { useGiGood } from '../lib/GiGoodContext'
+import { SeekerSubTab, TaskerSubTab, ToastVariant } from '../types'
 
 export function useUi() {
-  const { state, dispatch } = useGiGood();
+  const { state, dispatch } = useGiGood()
 
-  const showToast = useCallback((message: string, variant: ToastVariant = "info") => {
-    dispatch({ type: "SHOW_TOAST", payload: { message, variant } });
-  }, [dispatch]);
+  const setSeekerSubTab = useCallback((tab: SeekerSubTab) => {
+    dispatch({ type: 'SET_SEEKER_SUB_TAB', payload: tab })
+  }, [dispatch])
 
-  const hideToast = useCallback(() => dispatch({ type: "HIDE_TOAST" }), [dispatch]);
+  const setTaskerSubTab = useCallback((tab: TaskerSubTab) => {
+    dispatch({ type: 'SET_TASKER_SUB_TAB', payload: tab })
+  }, [dispatch])
 
-  const setSeekerTab = useCallback((tab: SeekerSubTab) => dispatch({ type: "SET_ACTIVE_SEEKER_TAB", payload: tab }), [dispatch]);
-  const setTaskerTab = useCallback((tab: TaskerSubTab) => dispatch({ type: "SET_ACTIVE_TASKER_TAB", payload: tab }), [dispatch]);
+  const showToast = useCallback((message: string, variant: ToastVariant = 'info') => {
+    dispatch({ type: 'SHOW_TOAST', payload: { message, variant } })
+    setTimeout(() => dispatch({ type: 'HIDE_TOAST' }), 3500)
+  }, [dispatch])
+
+  const dismissToast = useCallback(() => {
+    dispatch({ type: 'HIDE_TOAST' })
+  }, [dispatch])
 
   return {
-    toast: state.ui.toast,
-    showToast,
-    hideToast,
     activeSeekerSubTab: state.ui.activeSeekerSubTab,
     activeTaskerSubTab: state.ui.activeTaskerSubTab,
-    setSeekerTab,
-    setTaskerTab,
-    activeChatId: state.ui.activeChatId,
-    setActiveChatId: (id: number | null) => dispatch({ type: "SET_ACTIVE_CHAT_ID", payload: id }),
-    chatDetailOpen: state.ui.chatDetailOpen,
-    setChatDetailOpen: (v: boolean) => dispatch({ type: "SET_CHAT_DETAIL_OPEN", payload: v }),
-  };
+    notifOpen: state.ui.notifOpen,
+    notifBadge: state.ui.notifBadge,
+    matchingJobIdRef: state.ui.matchingJobIdRef,
+    toast: state.ui.toast,
+    setSeekerSubTab,
+    setTaskerSubTab,
+    showToast,
+    dismissToast,
+  }
 }

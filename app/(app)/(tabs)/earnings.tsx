@@ -1,59 +1,44 @@
-import { View, Text, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useGiGood } from "@/lib/GiGoodContext";
-import { formatVnd } from "@/lib/format";
+import { View, Text, ScrollView } from 'react-native'
+import { FontAwesome } from '@expo/vector-icons'
+import { useTasker } from '../../../hooks/useTasker'
+import { formatVnd } from '../../../lib/format'
 
 export default function EarningsScreen() {
-  const { state } = useGiGood();
-  const completed = state.data.jobs.filter(j => j.status === "completed");
-  const totalEarned = completed.reduce((sum, j) => sum + j.budget, 0);
+  const { earningsList, totalEarnings, completedCount } = useTasker()
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView contentContainerClassName="p-4">
-        <Text className="text-xl font-bold text-gray-800 mb-4">Thu nhập</Text>
+    <ScrollView className="flex-1 px-4 py-4" contentContainerStyle={{ paddingBottom: 24 }}>
+      <Text className="text-lg font-extrabold text-gray-800 mb-4">Thu nhập của bạn</Text>
 
-        <View className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          <Text className="text-gray-500 text-sm">Số dư ví</Text>
-          <Text className="text-3xl font-bold text-green-600 mt-1">
-            {formatVnd(state.data.taskerWallet)}
-          </Text>
-          <View className="flex-row justify-between mt-4 pt-4 border-t border-gray-100">
-            <View>
-              <Text className="text-gray-500 text-xs">Đã nhận</Text>
-              <Text className="text-lg font-semibold text-gray-800">{formatVnd(totalEarned)}</Text>
-            </View>
-            <View>
-              <Text className="text-gray-500 text-xs">Đang giữ</Text>
-              <Text className="text-lg font-semibold text-amber-600">
-                {formatVnd(state.data.escrowHeldPool)}
-              </Text>
-            </View>
-            <View>
-              <Text className="text-gray-500 text-xs">Việc xong</Text>
-              <Text className="text-lg font-semibold text-gray-800">{completed.length}</Text>
-            </View>
-          </View>
+      <View className="flex-row gap-3 mb-4">
+        <View className="flex-1 bg-white border border-gray-200 rounded-2xl p-3.5">
+          <FontAwesome name="money" size={14} color="#0f766e" style={{ marginBottom: 6 }} />
+          <Text className="text-base font-extrabold text-gray-800">{formatVnd(totalEarnings)}</Text>
+          <Text className="text-[10px] text-gray-400 font-medium">Tổng thu nhập</Text>
         </View>
+        <View className="flex-1 bg-white border border-gray-200 rounded-2xl p-3.5">
+          <FontAwesome name="check-circle" size={14} color="#ea580c" style={{ marginBottom: 6 }} />
+          <Text className="text-base font-extrabold text-gray-800">{completedCount}</Text>
+          <Text className="text-[10px] text-gray-400 font-medium">Việc hoàn thành</Text>
+        </View>
+      </View>
 
-        <Text className="text-base font-semibold text-gray-700 mb-2">Lịch sử thanh toán</Text>
-        {completed.length === 0 ? (
-          <View className="bg-white rounded-2xl p-8 items-center">
-            <Text className="text-4xl mb-2">💰</Text>
-            <Text className="text-gray-500">Chưa có giao dịch nào</Text>
-          </View>
+      <View>
+        <Text className="font-bold text-sm text-gray-800 mb-2">Lịch sử nhận tiền</Text>
+        {earningsList.length === 0 ? (
+          <Text className="text-xs text-gray-400 text-center py-8">Chưa có lịch sử nhận tiền nào.</Text>
         ) : (
-          completed.map(job => (
-            <View key={job.id} className="bg-white rounded-xl p-4 mb-2 flex-row justify-between items-center">
-              <View className="flex-1 mr-3">
-                <Text className="font-semibold text-gray-800" numberOfLines={1}>{job.title}</Text>
-                <Text className="text-gray-400 text-xs">{job.seekerName} • {job.timeTag}</Text>
+          earningsList.map(job => (
+            <View key={job.id} className="bg-white border border-gray-200 rounded-2xl p-3.5 flex-row items-center justify-between mb-2.5">
+              <View className="flex-1 min-w-0 pr-2">
+                <Text className="font-bold text-xs text-gray-800 leading-tight truncate">{job.title}</Text>
+                <Text className="text-[10px] text-gray-400">Khách: {job.seekerName}</Text>
               </View>
-              <Text className="font-bold text-green-600">+{formatVnd(job.budget)}</Text>
+              <Text className="font-bold text-xs text-emerald-600 flex-shrink-0">+{formatVnd(job.budget)}</Text>
             </View>
           ))
         )}
-      </ScrollView>
-    </SafeAreaView>
-  );
+      </View>
+    </ScrollView>
+  )
 }

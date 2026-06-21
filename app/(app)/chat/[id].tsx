@@ -4,20 +4,22 @@ import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChatBubble } from "@/components/ui/ChatBubble";
 import { useGiGood } from "@/lib/GiGoodContext";
+import { useChat } from "@/hooks/useChat";
 import { useJobs } from "@/hooks/useJobs";
 
 export default function ChatDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const jobId = parseInt(id ?? "0", 10);
   const { state } = useGiGood();
-  const { sendChat, getJobById } = useJobs();
+  const { sendChat } = useChat();
+  const { jobs } = useJobs();
   const role = state.auth.currentRole;
-  const job = getJobById(jobId);
+  const job = jobs.find(j => j.id === jobId) || null;
   const [text, setText] = useState("");
 
   const handleSend = () => {
     if (!text.trim() || !job) return;
-    sendChat(jobId, text.trim(), role);
+    sendChat(jobId, role, text.trim());
     setText("");
   };
 

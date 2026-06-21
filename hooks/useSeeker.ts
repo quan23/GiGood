@@ -1,19 +1,13 @@
-import { useMemo } from "react";
-import { useGiGood } from "@/lib/GiGoodContext";
-import type { Job } from "@/types";
+import { useMemo } from 'react'
+import { useGiGood } from '../lib/GiGoodContext'
 
-export function useSeekerJobs() {
-  const { state, dispatch } = useGiGood();
-  const postedJobs = useMemo(() => state.data.jobs.filter(j => j.seekerName === state.auth.profile?.name), [state.data.jobs, state.auth.profile?.name]);
-  const activeJob = useMemo(() => postedJobs.find(j => j.status === "assigned" || j.status === "finding"), [postedJobs]);
+export function useSeeker() {
+  const { state } = useGiGood()
+  const jobs = state.data.jobs
 
-  const unreadChats = useMemo(
-    () => postedJobs.filter(j => j.chats.length > 0 && j.chats[j.chats.length - 1]?.sender === "tasker"),
-    [postedJobs],
-  );
+  const activeJobs = useMemo(() => jobs.filter(j => j.status === 'finding' || j.status === 'assigned'), [jobs])
+  const history = useMemo(() => jobs.filter(j => j.status === 'completed'), [jobs])
+  const chatJobs = useMemo(() => jobs.filter(j => j.status === 'assigned' || j.status === 'completed'), [jobs])
 
-  const wallet = state.data.seekerWallet;
-  const escrow = state.data.escrowHeldPool;
-
-  return { postedJobs, activeJob, unreadChats, wallet, escrow, dispatch };
+  return { activeJobs, history, chatJobs }
 }

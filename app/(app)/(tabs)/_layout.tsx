@@ -1,90 +1,54 @@
-import { Tabs } from "expo-router";
-import { Text } from "react-native";
-import { useGiGood } from "@/lib/GiGoodContext";
+import { Tabs } from 'expo-router'
+import { FontAwesome } from '@expo/vector-icons'
+import { useAuth } from '../../../hooks/useAuth'
 
-const TAB_ICONS: Record<string, string> = {
-  post: "📋",
-  jobs: "📄",
-  board: "📋",
-  active: "⚡",
-  chat: "💬",
-  history: "🕐",
-  earnings: "💰",
-};
+const SEEKER_TABS = [
+  { name: 'post', label: 'Đăng việc', icon: 'plus-circle' as const },
+  { name: 'jobs', label: 'Việc của tôi', icon: 'list' as const },
+  { name: 'chat', label: 'Tin nhắn', icon: 'comments' as const },
+  { name: 'history', label: 'Lịch sử', icon: 'file-text' as const },
+]
+
+const TASKER_TABS = [
+  { name: 'board', label: 'Bảng việc', icon: 'map-marker' as const },
+  { name: 'active', label: 'Đã nhận', icon: 'briefcase' as const },
+  { name: 'chat', label: 'Tin nhắn', icon: 'comments' as const },
+  { name: 'earnings', label: 'Thu nhập', icon: 'money' as const },
+]
 
 export default function TabLayout() {
-  const { state } = useGiGood();
-  const role = state.auth.currentRole;
+  const { currentRole } = useAuth()
+  const isSeeker = currentRole === 'seeker'
+  const activeColor = isSeeker ? '#ea580c' : '#0f766e'
+  const tabs = isSeeker ? SEEKER_TABS : TASKER_TABS
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#16a34a",
-        tabBarInactiveTintColor: "#9ca3af",
-        tabBarStyle: { paddingBottom: 4, height: 56 },
-        tabBarLabelStyle: { fontSize: 11 },
-        tabBarIcon: ({ focused, color }) => (
-          <Text style={{ fontSize: 20 }}>{TAB_ICONS[focused ? "chat" : "chat"]}</Text>
-        ),
+        tabBarActiveTintColor: activeColor,
+        tabBarInactiveTintColor: '#9ca3af',
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopColor: '#e7e5e4',
+          paddingBottom: 10,
+          height: 60,
+        },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
       }}
     >
-      {role === "seeker" ? (
-        <>
-          <Tabs.Screen
-            name="post"
-            options={{
-              title: "Đăng việc",
-              tabBarIcon: ({ focused }) => <Text style={{ fontSize: 20 }}>{focused ? "📝" : "📋"}</Text>,
-            }}
-          />
-          <Tabs.Screen
-            name="jobs"
-            options={{
-              title: "Việc làm",
-              tabBarIcon: ({ focused }) => <Text style={{ fontSize: 20 }}>{focused ? "📄" : "📃"}</Text>,
-            }}
-          />
-          <Tabs.Screen
-            name="history"
-            options={{
-              title: "Lịch sử",
-              tabBarIcon: ({ focused }) => <Text style={{ fontSize: 20 }}>{focused ? "🕐" : "⏳"}</Text>,
-            }}
-          />
-        </>
-      ) : (
-        <>
-          <Tabs.Screen
-            name="board"
-            options={{
-              title: "Bảng việc",
-              tabBarIcon: ({ focused }) => <Text style={{ fontSize: 20 }}>{focused ? "📋" : "📄"}</Text>,
-            }}
-          />
-          <Tabs.Screen
-            name="active"
-            options={{
-              title: "Đang làm",
-              tabBarIcon: ({ focused }) => <Text style={{ fontSize: 20 }}>{focused ? "⚡" : "🔋"}</Text>,
-            }}
-          />
-          <Tabs.Screen
-            name="earnings"
-            options={{
-              title: "Thu nhập",
-              tabBarIcon: ({ focused }) => <Text style={{ fontSize: 20 }}>{focused ? "💰" : "💳"}</Text>,
-            }}
-          />
-        </>
-      )}
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: "Tin nhắn",
-          tabBarIcon: ({ focused }) => <Text style={{ fontSize: 20 }}>{focused ? "💬" : "✉️"}</Text>,
-        }}
-      />
+      {tabs.map(tab => (
+        <Tabs.Screen
+          key={tab.name}
+          name={tab.name}
+          options={{
+            title: tab.label,
+            tabBarIcon: ({ color, size }) => (
+              <FontAwesome name={tab.icon} size={size || 18} color={color} />
+            ),
+          }}
+        />
+      ))}
     </Tabs>
-  );
+  )
 }

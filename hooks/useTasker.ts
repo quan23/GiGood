@@ -1,13 +1,15 @@
-import { useMemo } from "react";
-import { useGiGood } from "@/lib/GiGoodContext";
-import type { Job } from "@/types";
+import { useMemo } from 'react'
+import { useGiGood } from '../lib/GiGoodContext'
 
-export function useTaskerBoard() {
-  const { state, dispatch } = useGiGood();
-  const availableJobs: Job[] = useMemo(() => state.data.jobs.filter(j => j.status === "finding"), [state.data.jobs]);
-  const activeJobs: Job[] = useMemo(() => state.data.jobs.filter(j => j.status === "assigned" && j.taskerName === state.auth.profile?.name), [state.data.jobs, state.auth.profile?.name]);
-  const completedJobs: Job[] = useMemo(() => state.data.jobs.filter(j => j.status === "completed" && j.taskerName === state.auth.profile?.name), [state.data.jobs, state.auth.profile?.name]);
-  const earnings = state.data.taskerWallet;
+export function useTasker() {
+  const { state } = useGiGood()
+  const jobs = state.data.jobs
 
-  return { availableJobs, activeJobs, completedJobs, earnings, dispatch };
+  const availableJobs = useMemo(() => jobs.filter(j => j.status === 'finding'), [jobs])
+  const assignedJobs = useMemo(() => jobs.filter(j => j.status === 'assigned' && !!j.taskerName), [jobs])
+  const earningsList = useMemo(() => jobs.filter(j => j.status === 'completed' && j.taskerName), [jobs])
+  const totalEarnings = useMemo(() => earningsList.reduce((sum, j) => sum + j.budget, 0), [earningsList])
+  const chatJobs = useMemo(() => jobs.filter(j => j.status === 'assigned' || j.status === 'completed'), [jobs])
+
+  return { availableJobs, assignedJobs, earningsList, totalEarnings, completedCount: earningsList.length, chatJobs }
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Modal, View, Text, TouchableOpacity } from "react-native";
-import type { Job, Role } from "@/types";
+import type { Job, Role } from "../../types";
 
 interface Props {
   visible: boolean;

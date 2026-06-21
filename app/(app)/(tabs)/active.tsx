@@ -1,103 +1,67 @@
-import { useState, useCallback, useEffect } from "react";
-import { View, Text, FlatList, RefreshControl } from "react-native";
-import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { JobCard } from "@/components/ui/JobCard";
-import { SkeletonCard } from "@/components/ui/SkeletonCard";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { ReportConfirm } from "@/components/modals/ReportConfirm";
-import { useGiGood } from "@/lib/GiGoodContext";
-import { useJobs } from "@/hooks/useJobs";
-import { useUi } from "@/hooks/useUi";
-import type { Job } from "@/types";
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
+import { FontAwesome } from '@expo/vector-icons'
+import { useTasker } from '../../../hooks/useTasker'
+import { useJobs } from '../../../hooks/useJobs'
+import { useUi } from '../../../hooks/useUi'
+import { useRouter } from 'expo-router'
+import { formatVnd } from '../../../lib/format'
+import { CATEGORY_META } from '../../../lib/categories'
 
 export default function ActiveScreen() {
-  const { state } = useGiGood();
-  const { confirmCompleted, reportCompleted } = useJobs();
-  const { showToast } = useUi();
-  const [reportJob, setReportJob] = useState<Job | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const active = state.data.jobs.filter(j => j.status === "assigned");
-  const role = state.auth.currentRole;
+  const { assignedJobs } = useTasker()
+  const { reportCompleted } = useJobs()
+  const { showToast } = useUi()
+  const router = useRouter()
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(t);
-  }, []);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 600);
-  }, []);
-
-  const handleComplete = (jobId: number) => {
-    if (role === "tasker") {
-      const job = state.data.jobs.find(j => j.id === jobId) ?? null;
-      setReportJob(job);
-    } else {
-      const job = state.data.jobs.find(j => j.id === jobId);
-      if (!job) return;
-      confirmCompleted(jobId, job.budget);
-      showToast("Xác nhận hoàn thành! Tiền đã được giải phóng.", "success");
-    }
-  };
-
-  const handleReportConfirm = () => {
-    if (!reportJob) return;
-    reportCompleted(reportJob.id);
-    showToast("Đã báo hoàn thành! Chờ chủ việc xác nhận.", "info");
-    setReportJob(null);
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-gray-50">
-        <View className="px-4 pt-4 pb-2">
-          <View className="h-7 w-28 bg-gray-200 rounded-lg mb-1" />
-          <View className="h-4 w-36 bg-gray-200 rounded" />
-        </View>
-        <SkeletonCard />
-        <SkeletonCard />
-      </SafeAreaView>
-    );
+  const handleReportComplete = (jobId: number) => {
+    reportCompleted(jobId)
+    showToast('Đã báo hoàn thành! Đang chờ khách xác nhận và giải ngân.', 'success')
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="px-4 pt-4 pb-2">
-        <Text className="text-xl font-bold text-gray-800">Đang làm</Text>
-        <Text className="text-gray-500 text-sm">{active.length} việc đang thực hiện</Text>
-      </View>
-      {active.length === 0 ? (
-        <EmptyState
-          icon="⚡"
-          title="Chưa có việc nào"
-          subtitle={role === "tasker" ? "Nhận việc từ bảng việc để bắt đầu" : "Bạn chưa có việc nào đang thực hiện"}
-        />
+    <ScrollView className="flex-1 px-4 py-4" contentContainerStyle={{ paddingBottom: 24 }}>
+      <Text className="text-lg font-extrabold text-gray-800 mb-4">Việc đã nhận</Text>
+
+      {assignedJobs.length === 0 ? (
+        <Text className="text-xs text-gray-400 text-center py-8">{'Bạn chưa nhận việc nào. Vào "Bảng việc" để xem các việc gần bạn!'}</Text>
       ) : (
-        <FlatList
-          data={active}
-          keyExtractor={item => item.id.toString()}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#16a34a" />}
-          contentContainerClassName="pb-4"
-          renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.delay(index * 60).springify()} exiting={FadeOutUp}>
-              <JobCard
-                job={item}
-                actionLabel={item.isCompletedReportedByTasker ? "Chờ xác nhận" : "Hoàn thành"}
-                onAction={item.isCompletedReportedByTasker ? undefined : () => handleComplete(item.id)}
-              />
-            </Animated.View>
-          )}
-        />
+        assignedJobs.map(job => {
+          const meta = CATEGORY_META[job.category]
+          return (
+            <View key={job.id} className="bg-white border border-gray-200 rounded-2xl p-3.5 space-y-2.5 mb-3">
+              <View className="flex-row items-center space-x-2">
+                <View className="w-8 h-8 rounded-lg bg-teal-50 items-center justify-center">
+                  <FontAwesome name={(meta?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={12} color="#0f766e" />
+                </View>
+                <View className="flex-1 min-w-0">
+                  <Text className="font-bold text-xs text-gray-800 leading-tight">{job.title}</Text>
+                  <Text className="text-[10px] text-gray-400">Khách: {job.seekerName}</Text>
+                </View>
+                <Text className="font-bold text-xs text-teal-600 flex-shrink-0">{formatVnd(job.budget)}</Text>
+              </View>
+              <Text className="text-[11px] text-gray-500">
+                <FontAwesome name="map-marker" size={10} color="#9ca3af" /> {job.location}
+              </Text>
+              <View className="flex-row gap-2">
+                <TouchableOpacity onPress={() => router.push(`/(app)/chat/${job.id}`)}
+                  className="flex-1 bg-stone-100 py-2.5 rounded-xl items-center">
+                  <Text className="text-gray-600 text-xs font-bold">Trò chuyện</Text>
+                </TouchableOpacity>
+              </View>
+              {job.isCompletedReportedByTasker ? (
+                <Text className="w-full text-center text-[11px] font-bold text-amber-600 bg-amber-50 py-2 rounded-xl">
+                  Đã báo hoàn thành — đang chờ khách xác nhận
+                </Text>
+              ) : (
+                <TouchableOpacity onPress={() => handleReportComplete(job.id)}
+                  className="w-full bg-orange-500 py-2.5 rounded-xl items-center">
+                  <Text className="text-white text-xs font-bold">Báo đã hoàn thành</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )
+        })
       )}
-      <ReportConfirm
-        visible={reportJob !== null}
-        job={reportJob}
-        onConfirm={handleReportConfirm}
-        onCancel={() => setReportJob(null)}
-      />
-    </SafeAreaView>
-  );
+    </ScrollView>
+  )
 }

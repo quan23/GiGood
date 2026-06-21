@@ -1,6 +1,6 @@
 import { Modal, View, Text, TouchableOpacity } from "react-native";
-import type { Job } from "@/types";
-import { formatVnd } from "@/lib/format";
+import type { Job } from "../../types";
+import { formatVnd } from "../../lib/format";
 
 interface Props {
   visible: boolean;

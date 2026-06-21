@@ -1,50 +1,77 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
-import { useGiGood } from "@/lib/GiGoodContext";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { FontAwesome } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 
-export default function RoleSelectScreen() {
-  const { dispatch } = useGiGood();
-  const router = useRouter();
+const FEATURES = [
+  { icon: 'shield' as const, text: 'Thanh toán ký quỹ an toàn, chỉ giải ngân khi xong việc' },
+  { icon: 'map-marker' as const, text: 'Gợi ý Tasker gần bạn theo bán kính GPS' },
+  { icon: 'star' as const, text: 'Đánh giá minh bạch hai chiều, bảo vệ cả hai bên' },
+]
 
-  function pickRole(role: "seeker" | "tasker") {
-    dispatch({ type: "REGISTER_ROLE", payload: role });
-    router.push((role === "seeker" ? "/(auth)/signup-seeker" : "/(auth)/signup-tasker") as any);
-  }
+export default function WelcomeScreen() {
+  const router = useRouter()
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 px-6 justify-center">
-        <Text className="text-3xl font-bold text-gray-900 text-center">Chào mừng đến với</Text>
-        <Text className="text-4xl font-extrabold text-green-600 text-center mb-2">GiGood</Text>
-        <Text className="text-base text-gray-500 text-center mb-10">
-          Bạn muốn tham gia với vai trò nào?
-        </Text>
+    <SafeAreaView className="flex-1">
+      <View className="flex-1 bg-orange-500 relative overflow-hidden">
+        <View className="absolute -right-24 -bottom-24 w-72 h-72 rounded-full bg-white/10" />
+        <View className="absolute -left-16 top-20 w-44 h-44 rounded-full bg-white/5" />
+        <View className="absolute right-10 top-32 w-16 h-16 rounded-2xl bg-white/10 rotate-12" />
 
-        <TouchableOpacity
-          onPress={() => pickRole("seeker")}
-          activeOpacity={0.85}
-          className="bg-orange-50 border-2 border-orange-200 rounded-3xl p-6 mb-5 items-center"
-        >
-          <Text className="text-5xl mb-3">{"\u{1F50D}"}</Text>
-          <Text className="text-xl font-bold text-gray-800">Tôi cần thuê người</Text>
-          <Text className="text-sm text-gray-500 mt-1 text-center">
-            Đăng việc và tìm người giúp việc nhanh chóng
-          </Text>
-        </TouchableOpacity>
+        <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }}>
+          <View className="flex-1 justify-between p-7">
+            <View className="flex-row items-center justify-between pt-4">
+              <Text className="text-xs font-bold tracking-wider uppercase bg-white/20 px-3 py-1 rounded-full text-white">
+                Dự án GiGood
+              </Text>
+              <FontAwesome name="bolt" size={20} color="rgba(255,255,255,0.8)" />
+            </View>
 
-        <TouchableOpacity
-          onPress={() => pickRole("tasker")}
-          activeOpacity={0.85}
-          className="bg-green-50 border-2 border-green-200 rounded-3xl p-6 items-center"
-        >
-          <Text className="text-5xl mb-3">{"\u{1F4AA}"}</Text>
-          <Text className="text-xl font-bold text-gray-800">Tôi muốn nhận việc</Text>
-          <Text className="text-sm text-gray-500 mt-1 text-center">
-            Kiếm thêm thu nhập với công việc linh hoạt
-          </Text>
-        </TouchableOpacity>
+            <View className="space-y-5">
+              <View className="space-y-2">
+                <Text className="text-5xl font-extrabold text-white">
+                  GiGood
+                </Text>
+                <Text className="text-sm text-white/90 leading-relaxed max-w-[280px]">
+                  Kết nối việc vặt tức thì & bảo chứng niềm tin hai chiều, ngay trong khu vực của bạn.
+                </Text>
+              </View>
+
+              <View className="space-y-3 pt-2">
+                {FEATURES.map((f, i) => (
+                  <View key={i} className="flex-row items-center space-x-3">
+                    <View className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
+                      <FontAwesome name={f.icon} size={12} color="white" />
+                    </View>
+                    <Text className="flex-1 text-xs text-white">{f.text}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className="space-y-3">
+              <TouchableOpacity
+                onPress={() => router.push('/(auth)/role-select')}
+                className="w-full bg-white py-3.5 rounded-2xl items-center justify-center flex-row space-x-2 active:opacity-90"
+              >
+                <Text className="font-bold text-sm text-orange-500">Bắt đầu ngay</Text>
+                <FontAwesome name="arrow-right" size={12} color="#ea580c" />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => router.push('/(auth)/login')} className="py-2 items-center">
+                <Text className="text-white/90 text-xs font-semibold underline underline-offset-2">
+                  Tôi đã có tài khoản
+                </Text>
+              </TouchableOpacity>
+
+              <Text className="text-[10px] text-white/60 text-center pt-1">
+                © 2026 GiGood Inc. — Bản demo mô phỏng UX/UI
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
       </View>
     </SafeAreaView>
-  );
+  )
 }

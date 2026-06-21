@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { View, Text, Animated } from "react-native";
-import { useUi } from "@/hooks/useUi";
+import { View, Text } from "react-native";
+import { useUi } from '../../hooks/useUi'
 
 const VARIANTS = {
   info: "bg-blue-500",
@@ -9,14 +9,14 @@ const VARIANTS = {
 };
 
 export function Toast() {
-  const { toast, hideToast } = useUi();
+  const { toast, dismissToast } = useUi()
 
   useEffect(() => {
     if (toast?.visible) {
-      const t = setTimeout(hideToast, 2500);
-      return () => clearTimeout(t);
+      const t = setTimeout(dismissToast, 2500)
+      return () => clearTimeout(t)
     }
-  }, [toast, hideToast]);
+  }, [toast, dismissToast]);
 
   if (!toast?.visible) return null;
 
