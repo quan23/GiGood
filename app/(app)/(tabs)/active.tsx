@@ -1,28 +1,39 @@
+import { useState } from "react";
 import { View, Text, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { JobCard } from "@/components/ui/JobCard";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ReportConfirm } from "@/components/modals/ReportConfirm";
 import { useGiGood } from "@/lib/GiGoodContext";
 import { useJobs } from "@/hooks/useJobs";
 import { useUi } from "@/hooks/useUi";
+import type { Job } from "@/types";
 
 export default function ActiveScreen() {
   const { state } = useGiGood();
   const { confirmCompleted, reportCompleted } = useJobs();
   const { showToast } = useUi();
+  const [reportJob, setReportJob] = useState<Job | null>(null);
   const active = state.data.jobs.filter(j => j.status === "assigned");
   const role = state.auth.currentRole;
 
   const handleComplete = (jobId: number) => {
     if (role === "tasker") {
-      reportCompleted(jobId);
-      showToast("Đã báo hoàn thành! Chờ chủ việc xác nhận.", "info");
+      const job = state.data.jobs.find(j => j.id === jobId) ?? null;
+      setReportJob(job);
     } else {
       const job = state.data.jobs.find(j => j.id === jobId);
       if (!job) return;
       confirmCompleted(jobId, job.budget);
       showToast("Xác nhận hoàn thành! Tiền đã được giải phóng.", "success");
     }
+  };
+
+  const handleReportConfirm = () => {
+    if (!reportJob) return;
+    reportCompleted(reportJob.id);
+    showToast("Đã báo hoàn thành! Chờ chủ việc xác nhận.", "info");
+    setReportJob(null);
   };
 
   return (
@@ -51,6 +62,12 @@ export default function ActiveScreen() {
           )}
         />
       )}
+      <ReportConfirm
+        visible={reportJob !== null}
+        job={reportJob}
+        onConfirm={handleReportConfirm}
+        onCancel={() => setReportJob(null)}
+      />
     </SafeAreaView>
   );
 }
