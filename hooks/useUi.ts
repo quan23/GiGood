@@ -15,7 +15,6 @@ export function useUi() {
 
   const showToast = useCallback((message: string, variant: ToastVariant = 'info') => {
     dispatch({ type: 'SHOW_TOAST', payload: { message, variant } })
-    setTimeout(() => dispatch({ type: 'HIDE_TOAST' }), 3500)
   }, [dispatch])
 
   const dismissToast = useCallback(() => {

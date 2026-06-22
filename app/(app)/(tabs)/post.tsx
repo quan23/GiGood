@@ -34,7 +34,7 @@ export default function PostScreen() {
       showToast('Vui lòng điền đầy đủ thông tin bắt buộc.', 'error')
       return
     }
-    const b = parseInt(budget, 10)
+    const b = parseInt(budget.replace(/,/g, ''), 10)
     if (isNaN(b) || b < 10000) {
       showToast('Mức giá không hợp lệ.', 'error')
       return

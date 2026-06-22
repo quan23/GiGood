@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useGiGood } from '../lib/GiGoodContext'
-import { Role, Category } from '../types'
+import { Role, Category, Availability, Vehicle } from '../types'
 
 export function useAuth() {
   const { state, dispatch } = useGiGood()
@@ -10,8 +10,8 @@ export function useAuth() {
     dispatch({ type: 'FINISH_SIGNUP_SEEKER', payload: { name, phone, location } })
   }, [dispatch])
 
-  const signUpTasker = useCallback((name: string, phone: string, location: string, taskerProfile: { skills: Category[]; bio: string; availability: string; vehicle: string; verified: boolean }) => {
-    dispatch({ type: 'FINISH_SIGNUP_TASKER', payload: { name, phone, location, taskerProfile: taskerProfile as any } })
+  const signUpTasker = useCallback((name: string, phone: string, location: string, taskerProfile: { skills: Category[]; bio: string; availability: Availability; vehicle: Vehicle; verified: boolean }) => {
+    dispatch({ type: 'FINISH_SIGNUP_TASKER', payload: { name, phone, location, taskerProfile } })
   }, [dispatch])
 
   const quickLogin = useCallback((role: Role) => {

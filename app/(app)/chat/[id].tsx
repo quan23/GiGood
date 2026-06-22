@@ -2,10 +2,10 @@ import { useState } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChatBubble } from "@/components/ui/ChatBubble";
-import { useGiGood } from "@/lib/GiGoodContext";
-import { useChat } from "@/hooks/useChat";
-import { useJobs } from "@/hooks/useJobs";
+import { ChatBubble } from "../../../components/ui/ChatBubble";
+import { useGiGood } from "../../../lib/GiGoodContext";
+import { useChat } from "../../../hooks/useChat";
+import { useJobs } from "../../../hooks/useJobs";
 
 export default function ChatDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -69,7 +69,7 @@ export default function ChatDetailScreen() {
         <TouchableOpacity
           onPress={handleSend}
           disabled={!text.trim()}
-          className="bg-green-600 rounded-full w-10 h-10 items-center justify-center"
+          className="bg-teal-600 rounded-full w-10 h-10 items-center justify-center"
         >
           <Text className="text-white text-lg">➤</Text>
         </TouchableOpacity>

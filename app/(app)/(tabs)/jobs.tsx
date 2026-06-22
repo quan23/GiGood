@@ -2,13 +2,15 @@ import { View, Text, TouchableOpacity, ScrollView, Image, Animated, Easing } fro
 import { FontAwesome } from '@expo/vector-icons'
 import { useUi } from '../../../hooks/useUi'
 import { useSeeker } from '../../../hooks/useSeeker'
+import { useGiGood } from '../../../lib/GiGoodContext'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { formatVnd } from '../../../lib/format'
 import { CATEGORY_META } from '../../../lib/categories'
 
 export default function JobsScreen() {
-  const { matchingJobIdRef } = useUi()
+  const { dispatch } = useGiGood()
+  const { matchingJobIdRef, showToast } = useUi()
   const { activeJobs } = useSeeker()
   const router = useRouter()
   const pulseAnim = useRef(new Animated.Value(1)).current
@@ -18,7 +20,7 @@ export default function JobsScreen() {
   useEffect(() => {
     if (matchingJobIdRef) {
       setSeconds(0)
-      timerRef.current = setInterval(() => setSeconds(s => s + 1), 800)
+      timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000)
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 2.4, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
@@ -33,7 +35,7 @@ export default function JobsScreen() {
   }, [matchingJobIdRef, pulseAnim])
 
   const matchingJob = matchingJobIdRef ? activeJobs.find(j => j.id === matchingJobIdRef) : null
-  const matchedJob = activeJobs.find(j => j.status === 'assigned' && j.taskerName && j.timeTag === 'Vừa ghép việc')
+  const matchedJob = activeJobs.find(j => j.status === 'assigned' && j.taskerName && j.timeTag === 'Vừa ghép việc' && !j.isCompletedReportedByTasker)
   const regularJobs = activeJobs.filter(j => !(matchingJobIdRef && j.id === matchingJobIdRef) && !(matchedJob && j.id === matchedJob.id))
 
   return (
@@ -126,7 +128,11 @@ export default function JobsScreen() {
                   </Text>
                 )}
                 {job.isCompletedReportedByTasker ? (
-                  <TouchableOpacity className="w-full bg-teal-600 py-2.5 rounded-xl items-center">
+                  <TouchableOpacity onPress={() => {
+                    dispatch({ type: 'RELEASE_ESCROW', payload: { jobId: job.id, rating: 5, comment: '' } })
+                    showToast('Giải ngân thành công! Cảm ơn bạn đã sử dụng GiGood.', 'success')
+                  }}
+                    className="w-full bg-teal-600 py-2.5 rounded-xl items-center">
                     <Text className="text-white text-xs font-bold">Xác nhận & Giải ngân</Text>
                   </TouchableOpacity>
                 ) : job.status === 'assigned' ? (

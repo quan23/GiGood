@@ -3,8 +3,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
+import { useGiGood } from '../../lib/GiGoodContext'
 import { useState } from 'react'
-import { Category } from '../../types'
+import { Category, Availability, Vehicle } from '../../types'
 import { CATEGORY_META, AVAILABILITY_LABEL, VEHICLE_LABEL } from '../../lib/categories'
 
 const SKILLS: { key: Category; icon: keyof typeof FontAwesome.glyphMap }[] = [
@@ -16,11 +17,13 @@ const SKILLS: { key: Category; icon: keyof typeof FontAwesome.glyphMap }[] = [
 
 export default function SignupTaskerProfileScreen() {
   const router = useRouter()
+  const { state, dispatch } = useGiGood()
   const { signUpTasker } = useAuth()
+  const basicInfo = state.auth.pendingBasicInfo
   const [selectedSkills, setSelectedSkills] = useState<Category[]>([])
   const [bio, setBio] = useState('')
-  const [availability, setAvailability] = useState('all-day')
-  const [vehicle, setVehicle] = useState('motorbike')
+  const [availability, setAvailability] = useState<Availability>('all-day')
+  const [vehicle, setVehicle] = useState<Vehicle>('motorbike')
   const [showAvailability, setShowAvailability] = useState(false)
   const [showVehicle, setShowVehicle] = useState(false)
 
@@ -32,13 +35,15 @@ export default function SignupTaskerProfileScreen() {
 
   const handleSubmit = () => {
     if (selectedSkills.length === 0) return
-    signUpTasker('', '', '', {
+    const info = basicInfo || { name: '', phone: '', location: '' }
+    signUpTasker(info.name, info.phone, info.location, {
       skills: selectedSkills,
       bio: bio || 'Tasker mới gia nhập GiGood, sẵn sàng nhận việc trong khu vực.',
       availability,
       vehicle,
       verified: false,
     })
+    dispatch({ type: 'SET_TEMP_SIGNUP_INFO', payload: null })
     router.replace('/(app)')
   }
 
@@ -114,7 +119,7 @@ export default function SignupTaskerProfileScreen() {
             {showAvailability && (
               <View className="border border-gray-200 rounded-2xl overflow-hidden">
                 {(Object.entries(AVAILABILITY_LABEL) as [string, string][]).map(([key, label]) => (
-                  <TouchableOpacity key={key} onPress={() => { setAvailability(key); setShowAvailability(false) }}
+                  <TouchableOpacity key={key} onPress={() => { setAvailability(key as Availability); setShowAvailability(false) }}
                     className={`px-4 py-3 border-b border-gray-100 ${availability === key ? 'bg-teal-50' : ''}`}>
                     <Text className={`text-sm ${availability === key ? 'text-teal-600 font-bold' : 'text-gray-700'}`}>{label}</Text>
                   </TouchableOpacity>
@@ -133,7 +138,7 @@ export default function SignupTaskerProfileScreen() {
             {showVehicle && (
               <View className="border border-gray-200 rounded-2xl overflow-hidden">
                 {(Object.entries(VEHICLE_LABEL) as [string, string][]).map(([key, label]) => (
-                  <TouchableOpacity key={key} onPress={() => { setVehicle(key); setShowVehicle(false) }}
+                  <TouchableOpacity key={key} onPress={() => { setVehicle(key as Vehicle); setShowVehicle(false) }}
                     className={`px-4 py-3 border-b border-gray-100 ${vehicle === key ? 'bg-teal-50' : ''}`}>
                     <Text className={`text-sm ${vehicle === key ? 'text-teal-600 font-bold' : 'text-gray-700'}`}>{label}</Text>
                   </TouchableOpacity>

@@ -3,10 +3,12 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
+import { useGiGood } from '../../lib/GiGoodContext'
 import { useState } from 'react'
 
 export default function SignupBasicScreen() {
   const router = useRouter()
+  const { dispatch } = useGiGood()
   const { pendingSignupRole, signUpSeeker } = useAuth()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -20,10 +22,11 @@ export default function SignupBasicScreen() {
 
   const handleSubmit = () => {
     if (!name || !phone || !password || !location || !agreed) return
-    signUpSeeker(name, phone, location)
     if (isSeeker) {
+      signUpSeeker(name, phone, location)
       router.replace('/(app)')
     } else {
+      dispatch({ type: 'SET_TEMP_SIGNUP_INFO', payload: { name, phone, location } })
       router.push('/(auth)/signup-tasker-profile')
     }
   }

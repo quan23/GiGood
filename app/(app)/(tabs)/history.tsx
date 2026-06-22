@@ -23,7 +23,7 @@ export default function HistoryScreen() {
               <Text className="text-amber-500 font-bold">
                 {job.seekerRating ? '\u2605'.repeat(job.seekerRating) : 'Chưa đánh giá'}
               </Text>
-              <Text className="font-bold text-gray-800">-{formatVnd(job.budget)}</Text>
+              <Text className="font-bold text-emerald-600">{formatVnd(job.budget)}</Text>
             </View>
           </View>
         ))

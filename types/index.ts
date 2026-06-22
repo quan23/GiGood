@@ -67,6 +67,7 @@ export type GiGoodState = {
     profile: UserProfile | null
     currentRole: Role
     pendingSignupRole: Role
+    pendingBasicInfo: { name: string; phone: string; location: string } | null
   }
   ui: {
     activeSeekerSubTab: SeekerSubTab

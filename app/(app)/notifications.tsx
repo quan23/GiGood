@@ -33,7 +33,8 @@ export default function NotificationsScreen() {
           keyExtractor={item => item.id.toString()}
           contentContainerClassName="p-4 pt-0"
           renderItem={({ item }) => (
-            <View className={`rounded-xl p-4 mb-2 ${item.read ? "bg-white" : "bg-green-50 border border-green-200"}`}>
+            <TouchableOpacity onPress={() => dispatch({ type: 'MARK_NOTIF_READ', payload: item.id })}
+              className={`rounded-xl p-4 mb-2 ${item.read ? "bg-white" : "bg-green-50 border border-green-200"}`}>
               <View className="flex-row justify-between">
                 <Text className={`flex-1 ${item.read ? "text-gray-600" : "text-gray-800 font-medium"}`}>
                   {item.text}
@@ -41,7 +42,7 @@ export default function NotificationsScreen() {
                 {!item.read && <View className="w-2 h-2 rounded-full bg-green-600 mt-2" />}
               </View>
               <Text className="text-xs text-gray-400 mt-1">{item.time}</Text>
-            </View>
+            </TouchableOpacity>
           )}
         />
       )}

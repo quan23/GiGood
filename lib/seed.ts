@@ -54,6 +54,7 @@ export function createInitialState(): GiGoodState {
     auth: {
       profile: null,
       currentRole: 'seeker',
+      pendingBasicInfo: null,
       pendingSignupRole: 'seeker',
     },
     ui: {

@@ -42,7 +42,7 @@ export default function BoardScreen() {
           </View>
         </View>
         {availableJobs.map(job => (
-          <View key={job.id} className="absolute" style={{ left: job.mapX as any, top: job.mapY as any }}>
+          <View key={job.id} className="absolute" style={{ left: job.mapX as any, top: job.mapY as any } as any}>
             <View className="relative w-7 h-7 -ml-3.5 -mt-3.5 rounded-full bg-orange-500 items-center justify-center border-2 border-white shadow">
               <FontAwesome name={(CATEGORY_META[job.category]?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={10} color="white" />
             </View>
