@@ -59,9 +59,17 @@ export default function AppLayout() {
         {/* Role Switcher */}
         <View className="bg-gray-100 p-1 rounded-xl flex-row mt-3">
           <TouchableOpacity
-            onPress={() => switchRole("seeker")}
-            className={`flex-1 py-2 rounded-lg flex-row items-center justify-center space-x-1.5 ${currentRole === "seeker" ? "bg-white shadow-sm" : ""}`}
+            onPress={() => {
+              if (currentRole !== "seeker") {
+                router.replace("/(app)/(tabs)/post");
+                switchRole("seeker");
+              }
+            }}
+            className="flex-1 py-2 rounded-lg flex-row items-center justify-center space-x-1.5 relative overflow-hidden"
           >
+            {currentRole === "seeker" && (
+              <View className="absolute inset-0 bg-white shadow-sm rounded-lg" />
+            )}
             <FontAwesome
               name="user"
               size={12}
@@ -74,9 +82,17 @@ export default function AppLayout() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => switchRole("tasker")}
-            className={`flex-1 py-2 rounded-lg flex-row items-center justify-center space-x-1.5 ${currentRole === "tasker" ? "bg-white shadow-sm" : ""}`}
+            onPress={() => {
+              if (currentRole !== "tasker") {
+                router.replace("/(app)/(tabs)/board");
+                switchRole("tasker");
+              }
+            }}
+            className="flex-1 py-2 rounded-lg flex-row items-center justify-center space-x-1.5 relative overflow-hidden"
           >
+            {currentRole === "tasker" && (
+              <View className="absolute inset-0 bg-white shadow-sm rounded-lg" />
+            )}
             <FontAwesome
               name="wrench"
               size={12}

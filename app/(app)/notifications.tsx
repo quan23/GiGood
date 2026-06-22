@@ -34,7 +34,8 @@ export default function NotificationsScreen() {
           contentContainerClassName="p-4 pt-0"
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => dispatch({ type: 'MARK_NOTIF_READ', payload: item.id })}
-              className={`rounded-xl p-4 mb-2 ${item.read ? "bg-white" : "bg-green-50 border border-green-200"}`}>
+              className="rounded-xl p-4 mb-2 bg-white"
+              style={item.read ? undefined : { backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0' }}>
               <View className="flex-row justify-between">
                 <Text className={`flex-1 ${item.read ? "text-gray-600" : "text-gray-800 font-medium"}`}>
                   {item.text}

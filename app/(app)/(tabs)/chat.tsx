@@ -87,9 +87,12 @@ export default function ChatScreen() {
           return (
             <View key={i} className={`flex-row mb-3 ${isMe ? 'justify-end' : ''}`} style={{ maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
               {!isMe && <Image source={{ uri: avatarUri }} className="w-7 h-7 rounded-full mt-0.5 border mr-2" />}
-              <View className={`${bgColor} p-3 rounded-2xl ${isMe ? 'rounded-tr-none' : 'rounded-tl-none'} shadow-sm`}>
-                <Text className={`text-xs leading-relaxed ${textColor}`}>{msg.text}</Text>
-                <Text className={`text-[9px] mt-1 ${isMe ? 'text-white/70' : 'text-gray-400'}`}>{msg.time}</Text>
+              <View className="relative">
+                <View className="absolute inset-0 shadow-sm" style={{ borderRadius: 16, borderTopRightRadius: isMe ? 0 : 16, borderTopLeftRadius: isMe ? 16 : 0 }} />
+                <View className={`${bgColor} p-3 rounded-2xl ${isMe ? 'rounded-tr-none' : 'rounded-tl-none'} overflow-hidden`}>
+                  <Text className={`text-xs leading-relaxed ${textColor}`}>{msg.text}</Text>
+                  <Text className={`text-[9px] mt-1 ${isMe ? 'text-white/70' : 'text-gray-400'}`}>{msg.time}</Text>
+                </View>
               </View>
             </View>
           )

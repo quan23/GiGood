@@ -79,7 +79,8 @@ export default function PostScreen() {
           <View className="flex-row flex-wrap gap-2">
             {catEntries.map(([key, meta]) => (
               <TouchableOpacity key={key} onPress={() => setCategory(key)}
-                className={`px-3 py-2 rounded-xl border ${category === key ? 'bg-orange-50 border-orange-300' : 'border-gray-200'}`}>
+                className="px-3 py-2 rounded-xl border border-gray-200"
+                style={category === key ? { backgroundColor: '#fff7ed', borderColor: '#fdba74' } : undefined}>
                 <Text className={`text-xs font-bold ${category === key ? 'text-orange-500' : 'text-gray-600'}`}>{meta.label}</Text>
               </TouchableOpacity>
             ))}
@@ -105,8 +106,8 @@ export default function PostScreen() {
           <View className="flex-1 space-y-1.5">
             <Text className="text-xs font-bold text-gray-700">Mức độ ưu tiên</Text>
             <TouchableOpacity onPress={() => setUrgent(!urgent)}
-              className={`w-full px-3 py-3 rounded-xl border items-center justify-center ${urgent ? 'bg-orange-50 border-orange-300' : 'border-gray-200'}`}
-              style={{ minHeight: 44 }}>
+              className="w-full px-3 py-3 rounded-xl border border-gray-200 items-center justify-center"
+              style={[{ minHeight: 44 }, urgent ? { backgroundColor: '#fff7ed', borderColor: '#fdba74' } : undefined]}>
               <Text className={`text-xs font-bold ${urgent ? 'text-orange-500' : 'text-gray-600'}`}>
                 {urgent ? 'Cần liền (phụ phí)' : 'Bình thường'}
               </Text>

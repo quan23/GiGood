@@ -50,7 +50,8 @@ export default function ProfileScreen() {
               {p.name}
             </Text>
             <Text
-              className={`text-xs font-bold ${isSeeker ? "text-orange-500" : "text-teal-600"}`}
+              className="text-xs font-bold"
+              style={{ color: isSeeker ? '#ea580c' : '#0f766e' }}
             >
               {isSeeker ? "Người Thuê (Seeker)" : "Người Nhận Việc (Tasker)"}
             </Text>

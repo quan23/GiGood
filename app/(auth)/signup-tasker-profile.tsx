@@ -91,7 +91,8 @@ export default function SignupTaskerProfileScreen() {
                 const active = selectedSkills.includes(sk.key)
                 return (
                   <TouchableOpacity key={sk.key} onPress={() => toggleSkill(sk.key)}
-                    className={`flex-row items-center space-x-2 p-3 rounded-xl border-2 mb-2.5 mr-2.5 ${active ? 'border-teal-600 bg-teal-50' : 'border-gray-200'}`}>
+                    className="flex-row items-center space-x-2 p-3 rounded-xl border-2 border-gray-200 mb-2.5 mr-2.5"
+                    style={active ? { borderColor: '#0f766e', backgroundColor: '#f0fdfa' } : undefined}>
                     <FontAwesome name={sk.icon} size={14} color={active ? '#0f766e' : '#9ca3af'} />
                     <Text className={`text-xs font-bold ${active ? 'text-teal-600' : 'text-gray-700'}`}>
                       {CATEGORY_META[sk.key].label}
@@ -120,7 +121,8 @@ export default function SignupTaskerProfileScreen() {
               <View className="border border-gray-200 rounded-2xl overflow-hidden">
                 {(Object.entries(AVAILABILITY_LABEL) as [string, string][]).map(([key, label]) => (
                   <TouchableOpacity key={key} onPress={() => { setAvailability(key as Availability); setShowAvailability(false) }}
-                    className={`px-4 py-3 border-b border-gray-100 ${availability === key ? 'bg-teal-50' : ''}`}>
+                    className="px-4 py-3 border-b border-gray-100"
+                    style={availability === key ? { backgroundColor: '#f0fdfa' } : undefined}>
                     <Text className={`text-sm ${availability === key ? 'text-teal-600 font-bold' : 'text-gray-700'}`}>{label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -139,7 +141,8 @@ export default function SignupTaskerProfileScreen() {
               <View className="border border-gray-200 rounded-2xl overflow-hidden">
                 {(Object.entries(VEHICLE_LABEL) as [string, string][]).map(([key, label]) => (
                   <TouchableOpacity key={key} onPress={() => { setVehicle(key as Vehicle); setShowVehicle(false) }}
-                    className={`px-4 py-3 border-b border-gray-100 ${vehicle === key ? 'bg-teal-50' : ''}`}>
+                    className="px-4 py-3 border-b border-gray-100"
+                    style={vehicle === key ? { backgroundColor: '#f0fdfa' } : undefined}>
                     <Text className={`text-sm ${vehicle === key ? 'text-teal-600 font-bold' : 'text-gray-700'}`}>{label}</Text>
                   </TouchableOpacity>
                 ))}
