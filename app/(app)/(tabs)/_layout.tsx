@@ -2,25 +2,22 @@ import { Tabs } from 'expo-router'
 import { FontAwesome } from '@expo/vector-icons'
 import { useAuth } from '../../../hooks/useAuth'
 
-const SEEKER_TABS = [
-  { name: 'post', label: 'Đăng việc', icon: 'plus-circle' as const },
-  { name: 'jobs', label: 'Việc của tôi', icon: 'list' as const },
-  { name: 'chat', label: 'Tin nhắn', icon: 'comments' as const },
-  { name: 'history', label: 'Lịch sử', icon: 'file-text' as const },
-]
+type Role = 'seeker' | 'tasker'
 
-const TASKER_TABS = [
-  { name: 'board', label: 'Bảng việc', icon: 'map-marker' as const },
-  { name: 'active', label: 'Đã nhận', icon: 'briefcase' as const },
-  { name: 'chat', label: 'Tin nhắn', icon: 'comments' as const },
-  { name: 'earnings', label: 'Thu nhập', icon: 'money' as const },
+const ALL_TABS: { name: string; label: string; icon: React.ComponentProps<typeof FontAwesome>['name']; roles: Role[] }[] = [
+  { name: 'post',     label: 'Đăng việc',    icon: 'plus-circle', roles: ['seeker'] },
+  { name: 'jobs',     label: 'Việc của tôi', icon: 'list',        roles: ['seeker'] },
+  { name: 'chat',     label: 'Tin nhắn',     icon: 'comments',    roles: ['seeker', 'tasker'] },
+  { name: 'history',  label: 'Lịch sử',      icon: 'file-text',   roles: ['seeker'] },
+  { name: 'board',    label: 'Bảng việc',    icon: 'map-marker',  roles: ['tasker'] },
+  { name: 'active',   label: 'Đã nhận',      icon: 'briefcase',   roles: ['tasker'] },
+  { name: 'earnings', label: 'Thu nhập',     icon: 'money',       roles: ['tasker'] },
 ]
 
 export default function TabLayout() {
   const { currentRole } = useAuth()
   const isSeeker = currentRole === 'seeker'
   const activeColor = isSeeker ? '#ea580c' : '#0f766e'
-  const tabs = isSeeker ? SEEKER_TABS : TASKER_TABS
 
   return (
     <Tabs
@@ -37,18 +34,22 @@ export default function TabLayout() {
         tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
       }}
     >
-      {tabs.map(tab => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            title: tab.label,
-            tabBarIcon: ({ color, size }) => (
-              <FontAwesome name={tab.icon} size={size || 18} color={color} />
-            ),
-          }}
-        />
-      ))}
+      {ALL_TABS.map(tab => {
+        const isActive = tab.roles.includes(currentRole as Role)
+        return (
+          <Tabs.Screen
+            key={tab.name}
+            name={tab.name}
+            options={{
+              title: tab.label,
+              href: isActive ? undefined : null,
+              tabBarIcon: ({ color, size }) => (
+                <FontAwesome name={tab.icon} size={size || 18} color={color} />
+              ),
+            }}
+          />
+        )
+      })}
     </Tabs>
   )
 }
