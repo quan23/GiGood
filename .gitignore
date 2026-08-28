@@ -1,0 +1,60 @@
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- Env / Secrets ---
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.Secrets.json
+**/secrets.json
+
+# --- Personal / Private docs (NOT committed) ---
+# Keep shareable docs in /docs only. Anything personal goes here and is ignored.
+private/
+personal/
+_local/
+drafts/
+*.private.md
+
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+publish/
+TestResults/
+coverage/
+
+# --- Flutter ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.lock
+.pub-cache/
+.pub/
+*.apk
+*.aab
+*.ipa
+ios/Pods/
+android/.gradle/
+android/app/build/
+android/local.properties
+**/android/key.properties
+**/upload-keystore.jks
+
+# --- Node (if any tooling) ---
+node_modules/
+dist/
+
+# --- Logs ---
+*.log
+logs/
