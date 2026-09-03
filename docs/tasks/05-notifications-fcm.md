@@ -2,7 +2,7 @@
 
 **Goal:** Replace `notifications:Notification[]` in-memory with persisted + push-ready notifications.
 
-**Depends:** 01, 04. **Branch:** `feat/05-notifications` off `master`.
+**Depends:** 01, 04, 06 (needs escrow events `OnEscrowReleased`; Qwen: 05-before-06 guarantees rework — implement after 06 or stub escrow events). **Branch:** `feat/05-notifications` off `master`.
 
 **API contract:**
 - `GET /api/notifications?cursor&limit -> 200 {notifications, nextCursor, unreadCount}`.

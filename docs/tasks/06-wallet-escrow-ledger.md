@@ -11,11 +11,11 @@
 - Flows:
   - `TopUp POST /api/wallet/topup {amount}` (stub for testing, adds `+Amount` tx + `Wallet.Balance+=`).
   - `POST /api/jobs/{id}/accept (tasker)` -> ledger tx: `payer Wallet.Balance -= amount` + `WalletTransaction Hold -amount` + `Escrows Held` + `Job.Status=Assigned` + `JobApplications` row. Concurrency `RowVersion` check, unique `Escrows(JobId)` prevents double-accept `409`.
-  - `POST /api/jobs/{id}/release-escrow {rating, comment}` (seeker) -> `Escrow Released`, payee `Wallet.Balance += amount` + `Release +amount` + `Job.Status=Done` + `Review` row. Validates `Escrow exists & Held & caller is payer`.
-  - `POST /api/jobs/{id}/cancel (owner, before accept)` -> no ledger; `POST /api/jobs/{id}/refund` if held but tasker abandons.
+  - `POST /api/jobs/{id}/release-escrow {rating?, comment?}` (seeker) -> `Escrow Released`, payee `Wallet.Balance += amount` + `Release +amount` + `Job.Status=Done`. Rating optional here — `Review` row created by 07 flow if provided, else skipped (decouples 06→07, GLM P8). Validates `Escrow exists & Held & caller is payer (DB CurrentRole, not claim)`.
+  - `POST /api/jobs/{id}/cancel (owner, allowed when Status Open|Assigned+not-reported)` -> if Held escrow exists → `Refund` payer +Amount + Escrow Refunded; else no ledger. `POST /api/jobs/{id}/refund` (tasker abandons when Held) same refund path. Unique Escrows(JobId) + status transitions `Held→Released|Refunded` allow re-accept only after Refunded (new Escrow row or status reset — define in code, GLM P8).
 
 **Entities:**
-- `Wallets(UserId PK FK->Users, Balance decimal(18,0), RowVersion rowversion)` 1-row per user, created on register with `Balance 1_420_000|2_850_000` mimic seed for demo but real.
+- `Wallets(UserId PK FK->Users, Balance decimal(18,0) CHECK (Balance>=0), ConcurrencyToken)` 1-row per user, created on register with `Balance 1_420_000|2_850_000` mimic seed for demo but real. **Provider note (GLM P3):** `rowversion` is SQL-Server-only — if Neon prod, use `xmin`/`IsConcurrencyToken` client token instead. Decide provider in 00; code must not assume `rowversion` type. Broadcast SignalR only after `CommitAsync`.
 - `WalletTransactions` append-only index `UserId, CreatedAt desc`.
 - `Escrows` unique `JobId`, index `PayerId, PayeeId`.
 

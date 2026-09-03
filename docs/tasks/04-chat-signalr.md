@@ -10,7 +10,7 @@
 - `POST /api/conversations/{id}/messages {body} -> 201 Message {id, conversationId, senderId, body, createdAt}`.
 - `GET /api/conversations/{id}/messages?cursor&limit=20 -> 200 {messages, nextCursor}` desc order, cursor = `createdAt+id`.
 - Entities `Conversations(Id Guid, JobId FK unique, CreatedAt)`, `Messages(Id Guid, ConversationId FK index+CreatedAt, SenderId FK, Body string max 2000, CreatedAt)`.
-- Hub `ChatHub` methods `JoinJobGroup(jobId)`, `SendMessage(jobId, body)`, events `ReceiveMessage(message)`, `Typing(jobId,userId,bool)`. Auth via `accessTokenFactory`, `Groups.AddToGroupAsync(jobId)`. Persist then `Clients.Group(jobId).SendAsync("ReceiveMessage", msgDto)`.
+- Hub `ChatHub` methods `JoinJobGroup(jobId)`, `SendMessage(jobId, body)`, events `ReceiveMessage(message)`, `Typing(jobId,userId,bool)`. Auth via `accessTokenFactory`, `Groups.AddToGroupAsync(jobId)`. **JwtBearer must read `access_token` query for `/hubs/*` via `options.Events.OnMessageReceived` (GLM P2) or every hub connect 401s.** `JoinJobGroup` validates caller is job owner/assignee. Persist then `SaveChangesAsync` then `CommitAsync` then broadcast (post-commit, GLM P8).
 
 **Flutter:**
 - `ChatBloc` events `LoadConversations, OpenConversation(jobId), SendMessage(text), ReceiveMessage(Message), TypingChanged` states `ConversationsLoaded, MessagesLoaded, Sending, Error`. `signalr_netcore` `HubConnectionBuilder().withUrl("$baseUrl/hubs/chat", accessTokenFactory)`.

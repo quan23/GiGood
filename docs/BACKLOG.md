@@ -30,15 +30,18 @@
 ## Dependency graph
 
 ```
-00
-├─01
-│  ├─02 ──03
-│  │  ├─04 ──05
-│  │  └─06 ──07
-│  └─08
-│     └─09
-└─10 (after 01-08)
-   └─11
+00 (owns nav shell + FakeRepos)
+├─01 (ships AuthBloc test; writes vi auth.* keys inline)
+│  ├─02a BE CRUD/upload ──02b FE pages+JobCard test (split if slips)
+│  │  ├─03 (flutter_map default)
+│  │  ├─04 (needs OnMessageReceived query-token)
+│  │  └─06 (escrow; CHECK Balance>=0, post-commit broadcast)
+│  │     ├─07 (ratings)
+│  │     └─05 (notifications; deps 01,04,06 — after escrow)
+│  └─08 (profile+roleswitch; re-issues token or DB role check)
+│     └─09 (i18n sweep only — keys written in 01-08)
+└─10 (Swagger Swashbuckle on .NET8 + seed polish; table says after 01-08)
+   └─11 (deploy last 0.5d)
 ```
 
 ## Conventions for each task file
