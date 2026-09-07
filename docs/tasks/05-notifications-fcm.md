@@ -18,7 +18,7 @@
 
 **Files to touch:**
 - `Api/Hubs/NotificationHub.cs`, `Api/Features/Notifications/*`, `Api/Data/AppDbContext.cs`.
-- `app_flutter/lib/features/notifications/{data/*, presentation/bloc/notifications_bloc.dart, pages/notifications_page.dart, widgets/notification_tile.dart}`, `app_flutter/lib/core/hub/notification_hub_service.dart`, `AppLayout` header bell badge `hasUnread`.
+- `app_mobile/lib/features/notifications/{data/*, presentation/bloc/notifications_bloc.dart, pages/notifications_page.dart, widgets/notification_tile.dart}`, `app_mobile/lib/core/hub/notification_hub_service.dart`, `AppLayout` header bell badge `hasUnread`.
 
 **Steps:**
 1. Migration `NotificationsInit`, seed `PUSH_NOTIF` on job events: `CreateJob -> notify seekers`, `Match -> notify owner`, `NewMessage -> notify other participant`.

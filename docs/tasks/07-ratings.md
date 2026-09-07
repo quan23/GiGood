@@ -17,7 +17,7 @@
 
 **Files to touch:**
 - `Api/Features/Ratings/*`, `Api/Data/AppDbContext.cs`, `Api/Features/Jobs/JobsEndpoints.cs` auto-create `Review` on release if rating provided.
-- `app_flutter/lib/features/ratings/{data/*, presentation/bloc/ratings_bloc.dart, widgets/star_row.dart, widgets/rating_sheet.dart}`, `app_flutter/lib/features/jobs/pages/jobs_page.dart` wire sheet, `app_flutter/lib/features/tasker/pages/active_page.dart`.
+- `app_mobile/lib/features/ratings/{data/*, presentation/bloc/ratings_bloc.dart, widgets/star_row.dart, widgets/rating_sheet.dart}`, `app_mobile/lib/features/jobs/pages/jobs_page.dart` wire sheet, `app_mobile/lib/features/tasker/pages/active_page.dart`.
 
 **Steps:**
 1. Migration `RatingsInit` + `CHECK (Rate BETWEEN 1 AND 5)` + `AVG` trigger or compute on `Users.RatingAvg` after insert.

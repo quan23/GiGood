@@ -7,7 +7,7 @@
 
 ```
 GiGood/
-  Api/              # .NET 8 Web API (Minimal APIs vertical slice) — DEPLOY (Render/Railway + Neon)
+  Api/              # .NET 8 Web API (Minimal APIs vertical slice) — DEPLOY (Render free + Neon)
   web/              # Web frontend (deploy: Vercel/Render static) — coming after backend
   app_mobile/       # Flutter mobile app (APK/AppBundle) — coming after backend
   deploy/           # compose.yml, render.yaml, .env.example
@@ -33,13 +33,14 @@ Decision: backend first, deployable bare minimum (Phase 0) before any FE work.
 | F9 | Tasker active (`assigned` mine, `Trò chuyện` → chat, `Báo đã hoàn thành` → `isCompletedReported` + amber waiting banner) | `(tabs)/active.tsx`, `REPORT_COMPLETED` | `isCompletedReportedByTasker=true` | `POST /api/jobs/{id}/report` (tasker, assigned→reported). `GET /api/jobs?status=Assigned&mine` | P0 |
 | F10 | Seeker jobs (radar + matched card orange + `4.9 · 120 việc` fixed + active list + `Xác nhận & Giải ngân` rating5 + `Mở trò chuyện`) | `(tabs)/jobs.tsx`, `RELEASE_ESCROW` | `status→completed`, `taskerRating`, `escrow-=`, `taskerWallet+=` | `POST /api/jobs/{id}/release-escrow {rating?,comment?}` (seeker, payer, Held only; rating optional → 07 creates Review, GLM P8). `POST /api/jobs/{id}/cancel` + `POST /api/jobs/{id}/refund` with transitions Held→Released/Refunded | P0 |
 | F11 | Chat dual-mode (sidebar+inline `tabs/chat.tsx` vs route `chat/[id].tsx`, `ChatBubble` green/gray, `SEND_CHAT`, `SET_ACTIVE_CHAT`, 100ms scroll) | `chat.tsx`, `chat/[id].tsx`, `ChatBubble.tsx`, `useChat` | Local `chats[]`, `time HH:mm` now | `POST /api/conversations {jobId}` idempotent, `GET /api/conversations` (+lastMessage/unread), `POST /api/conversations/{id}/messages`, `GET .../messages?cursor&limit=20`. `ChatHub JoinJobGroup/SendMessage/Typing` + `OnMessageReceived` query-token (GLM P2). Persist-then-commit-then-broadcast | P0 |
-| F12 | Escrow/wallet (header cards `formatVnd`, `seekerWallet 1.42M/taskerWallet 2.85M/escrow 150k`, `history`/`earnings` sums) | `_layout.tsx` wallet cards, `useWallet`, `history.tsx`, `earnings.tsx` | Single global pool arithmetic, no ledger | Ledger: `Wallets(UserId PK, Balance CHECK≥0, ConcurrencyToken — NOT rowversion if Neon, GLM P3)`, `WalletTransactions` append-only, `Escrows(JobId unique, Payer/Payee/Amount/Held/Released/Refunded)`. `GET /wallet/balance`, `GET /wallet/transactions`, `GET /escrows`, `POST /wallet/topup` stub | P0 |
+| F12 | Escrow/wallet (header cards `formatVnd`, `seekerWallet 1.42M/taskerWallet 2.85M/escrow 150k`, `history`/`earnings` sums) | `_layout.tsx` wallet cards, `useWallet`, `history.tsx`, `earnings.tsx` | Single global pool arithmetic, no ledger | Ledger: `Wallets(UserId PK, Balance CHECK≥0, Version uint xmin concurrency — Neon-only, decided)`, `WalletTransactions` append-only, `Escrows(JobId unique, Payer/Payee/Amount/Held/Released/Refunded)`. `GET /wallet/balance`, `GET /wallet/transactions`, `GET /escrows`, `POST /wallet/topup` stub | P0 |
 | F13 | Ratings (`StarRow` 5 amber, `Rating.tsx` modal, `RELEASE_ESCROW` rating5 + `RATE_TASKER`) | `StarRow.tsx`, `modals/Rating.tsx`, `RATE_TASKER` | Fixed 5★, double-rate possible, avg `4.9` hardcoded | `POST /api/ratings {jobId,rate 1-5,comment}` unique `(JobId,ReviewerId)` 409, only Done participants; `GET /api/ratings?jobId&userId`; `GET /api/users/{id}/rating` app-side AVG (GLM P10) | P1 (after escrow) |
 | F14 | Notifications (tray dropdown local `useState` + modal `notifications.tsx`, `PUSH_NOTIF/CLEAR_NOTIFS`, unread `#f0fdf4`, `hasUnread`) | `_layout.tsx` tray, `notifications.tsx`, `useNotifications` | In-memory array, `MARK_NOTIF_READ`, `notifBadge` dual logic | `Notifications` table (GLM P4). `GET /api/notifications`, `POST /api/notifications/mark-read`, `DELETE`. `NotificationHub NewNotification` on JobMatched/EscrowReleased/NewMessage. FCM stub only (foreground first) | P1 (after 04+06) |
 | F15 | Profile (avatar 64 orange border, `Đồng` tier, skills chips+bio+avail/vehicle, phone/location, `Đăng xuất` resets state) | `profile.tsx`, `SIGN_OUT` | `placehold.co`/`unsplash` avatars, `verified:false` always | `GET/PATCH /api/me`, `POST /api/me/avatar` (multipart via `/api/upload`), `POST /api/me/verify` stub. Avatar upload whitelist+size (GLM P10) | P1 |
 | F16 | Upload/images (none in demo — avatars are URLs) | — | No upload | `POST /api/upload` multipart → `/uploads/{guid}.ext` + `UseStaticFiles`. Needed for avatars + job images | P0 |
 | F17 | Lookups/meta (categories, availability, vehicles, templates, formatVnd `vi-VN`) | `categories.ts`, `format.ts`, `post.tsx TEMPLATES` | Hardcoded vi strings, no i18n lib | `GET /api/meta/categories`, `/availability`, `/vehicles`, `/job-templates` (4 templates). `vi` default strings preserved | P2 |
 | F18 | Infra (no backend, session-only, timers `setInterval 1s`/`Animated.loop`/`Toast 2500ms`, `expo-secure-store` unused) | `Toast.tsx`, `MatchingOverlay`, `store/` empty | Reload loses all | Replace with persist + JWT in secure storage + hub reconnect. FE-only toasts/animations stay FE | — |
+| F19 | Web admin (display-only) + landing stub | — (no demo equivalent) | New surface | `Users.IsAdmin bool` (seed 1 admin) + `Admin` auth policy. `GET /api/admin/stats`, `GET /api/admin/users`, `POST /api/admin/users/{id}/ban`, `GET /api/admin/jobs`, `POST /api/admin/jobs/{id}/hide`, `GET /api/admin/escrows`, `POST /api/admin/escrows/{id}/release`, `POST /api/admin/escrows/{id}/refund` (reuse 06 ledger tx). Landing = static stub, no API | P2 (task 12, after 01+02+06) |
 
 Seed to preserve: `INITIAL_JOBS` 201 (repair 150k, assigned Minh Quân T., 3 chats) + 202 (delivery 45k, finding) + `SAMPLE_TASKERS` ×3 + wallets 1.42M/2.85M/150k + `CATEGORY_META`/labels + 4 post templates.
 
@@ -119,8 +120,19 @@ Auth: no `Auth:` = anonymous; `Auth` = Bearer required. All DTOs `FluentValidati
 |--------|------|------|-------|
 | POST | `/api/upload` | Yes | Multipart `image/* ≤5MB` → `{url:/uploads/{guid}.ext}` (whitelist, GLM P10) |
 
-### Meta (`/api/meta`)
+### Admin (`/api/admin`, `Admin` policy = `IsAdmin` claim)
 | Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/api/admin/stats` | Admin | `{users, jobsByStatus, escrowHeld, volumeToday}` for dashboard cards |
+| GET | `/api/admin/users?query&cursor&limit` | Admin | List + ban flags |
+| POST | `/api/admin/users/{id}/ban` | Admin | `{banned:bool}` → 204 |
+| GET | `/api/admin/jobs?status&cursor&limit` | Admin | All jobs + owner info |
+| POST | `/api/admin/jobs/{id}/hide` | Admin | `{hidden:bool}` → 204 (hidden excluded from board) |
+| GET | `/api/admin/escrows?status` | Admin | All escrows + parties |
+| POST | `/api/admin/escrows/{id}/release` | Admin | Force Held→Released via 06 ledger tx |
+| POST | `/api/admin/escrows/{id}/refund` | Admin | Force Held→Refunded via 06 ledger tx |
+
+### Meta (`/api/meta`)| Method | Path | Auth | Notes |
 |--------|------|------|-------|
 | GET | `/api/meta/categories` | No | 4 `CATEGORY_META` |
 | GET | `/api/meta/availability` | No | 5 labels |
@@ -142,7 +154,7 @@ Auth: no `Auth:` = anonymous; `Auth` = Bearer required. All DTOs `FluentValidati
 
 ## 3. Data model (min, from §1)
 
-`Users(Id Guid PK v7, Phone unique, PasswordHash, Name, AvatarUrl, RatingAvg, CurrentRole, Skills json, Bio, Availability, Vehicle, Verified, CreatedAt)` · `RefreshTokens(Id, UserId FK, TokenHash SHA256, ExpiresAt, RevokedAt?, ReplacedBy?)` · `Categories(Id, Key, Label, Icon)` seed 4 · `Jobs(Id Guid v7 PK, OwnerId FK, Title, Description, Category, Price, Status, Lat?, Lng?, LocationText, IsReported, CreatedAt, UpdatedAt, ConcurrencyToken)` · `JobImages(JobId FK, Url)` · `JobApplications(JobId, WorkerId, Offer?, Status, PK(JobId,WorkerId))` · `Conversations(Id, JobId unique FK, CreatedAt)` · `Messages(Id, ConversationId FK idx+CreatedAt desc, SenderId FK, Body, CreatedAt)` · `Wallets(UserId PK FK, Balance CHECK≥0, ConcurrencyToken)` · `WalletTransactions(Id, UserId FK idx+CreatedAt, Type, Amount, RefJobId, CreatedAt)` append-only · `Escrows(Id, JobId unique, PayerId, PayeeId, Amount, Status, HeldAt, ReleasedAt?)` · `Reviews(Id, JobId, ReviewerId unique(JobId,ReviewerId), Rate CHECK 1-5, Comment, CreatedAt)` · `Notifications(Id, UserId FK idx+Read+CreatedAt, Type, Title, Body, JobId?, Read, CreatedAt)`.
+`Users(Id Guid PK v7, Phone unique, PasswordHash, Name, AvatarUrl, RatingAvg, CurrentRole, IsAdmin bool default false, Banned bool default false, Skills json, Bio, Availability, Vehicle, Verified, CreatedAt)` · `RefreshTokens(Id, UserId FK, TokenHash SHA256, ExpiresAt, RevokedAt?, ReplacedBy?)` · `Categories(Id, Key, Label, Icon)` seed 4 · `Jobs(Id Guid v7 PK, OwnerId FK, Title, Description, Category, Price, Status, Lat?, Lng?, LocationText, IsReported, CreatedAt, UpdatedAt, ConcurrencyToken)` · `JobImages(JobId FK, Url)` · `JobApplications(JobId, WorkerId, Offer?, Status, PK(JobId,WorkerId))` · `Conversations(Id, JobId unique FK, CreatedAt)` · `Messages(Id, ConversationId FK idx+CreatedAt desc, SenderId FK, Body, CreatedAt)` · `Wallets(UserId PK FK, Balance CHECK≥0, ConcurrencyToken)` · `WalletTransactions(Id, UserId FK idx+CreatedAt, Type, Amount, RefJobId, CreatedAt)` append-only · `Escrows(Id, JobId unique, PayerId, PayeeId, Amount, Status, HeldAt, ReleasedAt?)` · `Reviews(Id, JobId, ReviewerId unique(JobId,ReviewerId), Rate CHECK 1-5, Comment, CreatedAt)` · `Notifications(Id, UserId FK idx+Read+CreatedAt, Type, Title, Body, JobId?, Read, CreatedAt)`.
 
 ---
 
@@ -150,7 +162,7 @@ Auth: no `Auth:` = anonymous; `Auth` = Bearer required. All DTOs `FluentValidati
 
 Scope: prove deploy pipeline before features. No DB dependency, no auth yet.
 
-- [ ] `GET /health` 200 `{status:"ok"}` (Render/Railway probe)
+- [ ] `GET /health` 200 `{status:"ok"}` (Render probe)
 - [ ] `GET /swagger` + `/openapi.json` (Swashbuckle)
 - [ ] `GET /api/meta/categories` static (proves Minimal APIs group works)
 - [ ] `Dockerfile` (publish Release, `$PORT`, non-root) + `.dockerignore`

@@ -23,7 +23,7 @@
 
 **Files to touch:**
 - `Api/Program.cs`, `Api/Data/Seeder.cs`, `Api/Api.csproj` ensure `Microsoft.AspNetCore.OpenApi`.
-- `app_flutter/test/{unit/*, widget/*, helpers/*}`, `app_flutter/pubspec.yaml` already has deps from 00.
+- `app_mobile/test/{unit/*, widget/*, helpers/*}`, `app_mobile/pubspec.yaml` already has deps from 00.
 
 **Steps:**
 1. Add `builder.Services.AddOpenApi()` + `app.MapOpenApi()` + `app.MapScalarApiReference` (install `Scalar.AspNetCore` if needed).

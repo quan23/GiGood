@@ -9,7 +9,8 @@ Monorepo for GiGood rebuild — **Flutter + .NET 8**. Old `EXE101` demo (`Expo S
 ├── docs/                 # Shareable docs only (committed)
 │   └── TECH_STACK_PLAN.md
 ├── Api/                  # .NET 8 Web API (Minimal APIs + SignalR) — coming next
-├── app_flutter/          # Flutter app — coming next
+├── app_mobile/         # Flutter app (PRM393) — coming next
+├── web/                # Vite + React web (landing + display-only admin, EXE201) — coming next
 ├── deploy/               # docker-compose + .env.example — coming next
 ├── private/              # Local personal docs — IGNORED (see .gitignore)
 └── README.md
@@ -24,8 +25,11 @@ cd GiGood
 # Backend
 cd Api && dotnet restore && dotnet ef database update && dotnet run
 
-# Frontend
-cd app_flutter && flutter pub get && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000
+# Frontend (mobile)
+cd app_mobile && flutter pub get && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000
+
+# Frontend (web: landing + admin)
+cd web && npm install && npm run dev
 ```
 
 ## Docs

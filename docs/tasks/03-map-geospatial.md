@@ -16,7 +16,7 @@
 
 **Files to touch:**
 - `Api/Features/Jobs/JobsEndpoints.cs` add `lat/lng/radius` handling.
-- `app_flutter/lib/features/jobs/pages/board_page.dart` rewrite inline fake map, `app_flutter/lib/features/jobs/widgets/job_map.dart`, `android/app/src/main/AndroidManifest.xml`, `app_flutter/pubspec.yaml` already has dep.
+- `app_mobile/lib/features/jobs/pages/board_page.dart` rewrite inline fake map, `app_mobile/lib/features/jobs/widgets/job_map.dart`, `android/app/src/main/AndroidManifest.xml`, `app_mobile/pubspec.yaml` already has dep.
 
 **Steps:**
 1. Backend add query params parsing, delta approx `radius/111km`, `AsNoTracking`, index already on `Lat/Lng`.

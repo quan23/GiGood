@@ -20,7 +20,7 @@
 
 **Files to touch:**
 - `Api/Features/Auth/*` (`AuthEndpoints.cs`, `Dtos.cs`, `JwtProvider.cs` HS256 32+ bytes, `PasswordHasher` BCrypt), `Api/Data/AppDbContext.cs` add DbSets, `Program.cs` `AddJwtBearer ClockSkew 30s`.
-- `app_flutter/lib/features/auth/{data/datasources/auth_api.dart, data/models/user_model.dart, presentation/bloc/auth_bloc.dart, pages/*}` + `app_flutter/lib/core/network/dio_client.dart` interceptor.
+- `app_mobile/lib/features/auth/{data/datasources/auth_api.dart, data/models/user_model.dart, presentation/bloc/auth_bloc.dart, pages/*}` + `app_mobile/lib/core/network/dio_client.dart` interceptor.
 
 **Steps:**
 1. Migrations `dotnet ef migrations add AuthInit` -> `dotnet ef database update` (add `Users`, `RefreshTokens`).

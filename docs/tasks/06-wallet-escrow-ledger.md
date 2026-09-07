@@ -1,4 +1,4 @@
-# 06 — Wallet Escrow Ledger + RowVersion + Billing/Cart
+# 06 — Wallet Escrow Ledger + xmin Concurrency + Billing/Cart
 
 **Goal:** Replace single global `escrowHeldPool` number with real ledger satisfying PRM393 `Billing/Cart` via booking cart + escrow checkout.
 
@@ -10,12 +10,12 @@
 - `GET /api/escrows?status&jobId -> 200 Escrow[]` where `Escrow {id, jobId, payerId, payeeId, amount, status:Held|Released|Refunded, heldAt, releasedAt?}`.
 - Flows:
   - `TopUp POST /api/wallet/topup {amount}` (stub for testing, adds `+Amount` tx + `Wallet.Balance+=`).
-  - `POST /api/jobs/{id}/accept (tasker)` -> ledger tx: `payer Wallet.Balance -= amount` + `WalletTransaction Hold -amount` + `Escrows Held` + `Job.Status=Assigned` + `JobApplications` row. Concurrency `RowVersion` check, unique `Escrows(JobId)` prevents double-accept `409`.
+  - `POST /api/jobs/{id}/accept (tasker)` -> ledger tx: `payer Wallet.Balance -= amount` + `WalletTransaction Hold -amount` + `Escrows Held` + `Job.Status=Assigned` + `JobApplications` row. Concurrency `xmin` token check, unique `Escrows(JobId)` prevents double-accept `409`.
   - `POST /api/jobs/{id}/release-escrow {rating?, comment?}` (seeker) -> `Escrow Released`, payee `Wallet.Balance += amount` + `Release +amount` + `Job.Status=Done`. Rating optional here — `Review` row created by 07 flow if provided, else skipped (decouples 06→07, GLM P8). Validates `Escrow exists & Held & caller is payer (DB CurrentRole, not claim)`.
   - `POST /api/jobs/{id}/cancel (owner, allowed when Status Open|Assigned+not-reported)` -> if Held escrow exists → `Refund` payer +Amount + Escrow Refunded; else no ledger. `POST /api/jobs/{id}/refund` (tasker abandons when Held) same refund path. Unique Escrows(JobId) + status transitions `Held→Released|Refunded` allow re-accept only after Refunded (new Escrow row or status reset — define in code, GLM P8).
 
 **Entities:**
-- `Wallets(UserId PK FK->Users, Balance decimal(18,0) CHECK (Balance>=0), ConcurrencyToken)` 1-row per user, created on register with `Balance 1_420_000|2_850_000` mimic seed for demo but real. **Provider note (GLM P3):** `rowversion` is SQL-Server-only — if Neon prod, use `xmin`/`IsConcurrencyToken` client token instead. Decide provider in 00; code must not assume `rowversion` type. Broadcast SignalR only after `CommitAsync`.
+- `Wallets(UserId PK FK->Users, Balance decimal(18,0) CHECK (Balance>=0), Version uint → xmin via IsConcurrencyToken())` 1-row per user, created on register with `Balance 1_420_000|2_850_000` mimic seed for demo but real. Neon-only (decided). Broadcast SignalR only after `CommitAsync`.
 - `WalletTransactions` append-only index `UserId, CreatedAt desc`.
 - `Escrows` unique `JobId`, index `PayerId, PayeeId`.
 
@@ -26,10 +26,10 @@
 
 **Files to touch:**
 - `Api/Features/Wallet/*`, `Api/Features/Escrows/*`, `Api/Data/AppDbContext.cs`, `Api/Features/Jobs/JobsEndpoints.cs` add accept/release logic.
-- `app_flutter/lib/features/wallet/{data/*, presentation/bloc/wallet_bloc.dart, presentation/cubit/cart_cubit.dart, pages/wallet_page.dart, pages/transactions_page.dart}`, header `useWallet` refactor.
+- `app_mobile/lib/features/wallet/{data/*, presentation/bloc/wallet_bloc.dart, presentation/cubit/cart_cubit.dart, pages/wallet_page.dart, pages/transactions_page.dart}`, header `useWallet` refactor.
 
 **Steps:**
-1. Migration `WalletEscrowInit` add 3 tables + `RowVersion` (`IsConcurrencyToken()`).
+1. Migration `WalletEscrowInit` add 3 tables + `Version uint` mapped to `xmin` (`IsConcurrencyToken()`).
 2. Implement `TopUp` for testing + `Balance/Transactions/Escrows` GETs.
 3. Implement `Hold` tx in `accept`: `await using var tx = await db.Database.BeginTransactionAsync(); try { wallet.Balance -= amount; db.WalletTransactions.Add(Hold); db.Escrows.Add(Held); job.Status=Assigned; await db.SaveChangesAsync(); await tx.CommitAsync(); } catch (DbUpdateConcurrencyException) => 409 "Retry"`.
 4. Implement `Release` similarly.
@@ -50,6 +50,6 @@ curl -H "Authorization: Bearer $SEEKER" http://localhost:5000/api/wallet/balance
 flutter analyze
 ```
 
-**Commit:** `feat(wallet): escrow ledger + RowVersion + billing/cart (#06)`
+**Commit:** `feat(wallet): escrow ledger + xmin + billing/cart (#06)`
 
-**Risks:** Never `wallet.Balance -= amount` without tx + `RowVersion`. Log `Tx` failures.
+**Risks:** Never `wallet.Balance -= amount` without tx + `xmin` check. Log `Tx` failures.

@@ -20,7 +20,7 @@ Models verified via `opencode models`: `opencode-go/deepseek-v4-flash-vision-exp
 ## DeepSeek V4 Flash Vision — keep/cut/defer + risks
 
 1. **KEEP** Flutter bloc/dio + .NET 8 Minimal APIs vertical slice. Single project, explicit Bloc scores PRM393.
-2. **KEEP** Escrow ledger per-job WalletTransactions + RowVersion + unique Escrows(JobId). This is EXE201 transaction evidence.
+2. **KEEP** Escrow ledger per-job WalletTransactions + `xmin` concurrency + unique Escrows(JobId). This is EXE201 transaction evidence.
 3. **KEEP** Seed with real lat/lng + i18n vi default. Seeded Q1 jobs make map/board alive, kills cold-start demo risk.
 4. **CUT from 2w:** Refresh rotation + reuse-detection family revocation. Keep opaque 7d refresh + rotate-on-use, skip reuse-detection (can't demo, OWASP-only).
 5. **DEFER:** FCM (foreground hub only), PostGIS, Neon/Render to last 0.5d, admin/OTP/S3.
@@ -40,7 +40,7 @@ Repo is docs-only (no `Api/` yet) — validates design, found real bugs:
 
 - **P1 JWT bug:** `sub = jti = Guid` — sub must = User.Id, jti separate. Set RoleClaimType="role", NameClaimType="sub".
 - **P2 SignalR 401:** JwtBearer reads header only; `signalr_netcore` sends `access_token` query. Need `OnMessageReceived` reading query for `/hubs/*`. Missing everywhere.
-- **P3 RowVersion breaks Postgres switch:** `rowversion` SQL-Server-only; Npgsql uses `xmin`. Decide provider now (Decision #1 blocking) or use client concurrency token.
+- **P3 RowVersion breaks Postgres switch (RESOLVED):** `rowversion` is SQL-Server-only — DECIDED Neon Postgres only, concurrency via `xmin` (`uint Version` + `IsConcurrencyToken()`).
 - **P4 Entity gaps:** "8 tables" lists 10; missing Category seed table, Notifications table, taskerProfile storage.
 - **P5 User PK contradiction:** `Id Guid` + `Phone string PK` — use Id PK + unique index Phone.
 - **P6 Role staleness:** role claim baked 15m, CurrentRole switches — check DB CurrentRole on `accept`, or re-issue on switch.
@@ -78,8 +78,8 @@ Template: section names drift from BACKLOG convention; add Out-of-scope/Owner/Es
 5. 02-jobs: split note 02a BE / 02b FE, JobCard widget test in 02, upload whitelist+size.
 6. 00-scaffold: FakeRepos + nav shell owner + flutter_map default + Swashbuckle on .NET 8.
 7. 09-i18n: keys written inside 01-08, 09 = sweep.
-8. DB decision recorded: SQL Server dev, Neon prod — concurrency via client token until Decision #1 closed (see P3).
+8. DB decided: Neon Postgres only (dev+prod branches) — concurrency via `xmin`, no SQL Server anywhere.
 
 ## Deferred (unchanged)
 
-FCM bg, PostGIS, Clean Arch, MediatR, Azure SignalR/Blob, OTP, admin, BE xUnit beyond smoke, CI.
+FCM bg, PostGIS, Clean Arch, MediatR, Azure SignalR/Blob, OTP, BE xUnit beyond smoke, CI.

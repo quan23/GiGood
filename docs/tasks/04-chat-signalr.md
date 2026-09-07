@@ -19,7 +19,7 @@
 
 **Files to touch:**
 - `Api/Hubs/ChatHub.cs`, `Api/Features/Chat/*`, `Api/Data/AppDbContext.cs`, `Api/Program.cs` `MapHub<ChatHub>("/hubs/chat")` + `RequireAuthorization`.
-- `app_flutter/lib/features/chat/{data/*, presentation/bloc/chat_bloc.dart, hub/chat_hub_service.dart, pages/chat_page.dart, pages/conversation_page.dart, widgets/chat_bubble.dart}`.
+- `app_mobile/lib/features/chat/{data/*, presentation/bloc/chat_bloc.dart, hub/chat_hub_service.dart, pages/chat_page.dart, pages/conversation_page.dart, widgets/chat_bubble.dart}`.
 
 **Steps:**
 1. Migration `ChatInit` + indexes `Messages(ConversationId, CreatedAt desc)`.

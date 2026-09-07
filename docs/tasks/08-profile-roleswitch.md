@@ -19,7 +19,7 @@
 
 **Files to touch:**
 - `Api/Features/Users/*`, `Api/Features/Auth/*` switch endpoint, `Api/Data/AppDbContext.cs`.
-- `app_flutter/lib/features/auth/presentation/bloc/auth_bloc.dart` add `SwitchRoleRequested`, `app_flutter/lib/features/profile/{pages/profile_page.dart, cubit/profile_cubit.dart, widgets/avatar_picker.dart}`, `app_flutter/lib/hooks/useAuth` ported to bloc.
+- `app_mobile/lib/features/auth/presentation/bloc/auth_bloc.dart` add `SwitchRoleRequested`, `app_mobile/lib/features/profile/{pages/profile_page.dart, cubit/profile_cubit.dart, widgets/avatar_picker.dart}`, `app_mobile/lib/hooks/useAuth` ported to bloc.
 
 **Steps:**
 1. Migration if `TaskerProfile` columns missing (`Skills jsonb/string`, `Bio`, `Availability`, `Vehicle`, `Verified bool`).

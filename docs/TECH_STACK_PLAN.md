@@ -1,6 +1,6 @@
 # GiGood Rebuild — Tech Stack Plan
 
-> **Source:** `EXE101` demo `GiGood` (Expo SDK 54 + RN + NativeWind) used as Figma/spec only. Not a port. Full rebuild: **Flutter (FE) + .NET 8 (BE)** — keep tokens/flows, discard reducer/timers.
+> **Source:** `EXE101` demo `GiGood` (Expo SDK 54 + RN + NativeWind) used as Figma/spec only. Not a port. Full rebuild: **Flutter (mobile) + Vite+React (web landing + display-only admin) + .NET 8 (BE) + Neon Postgres** — keep tokens/flows, discard reducer/timers.
 > **Constraints:** Old team, new project. Deadline 11 weeks, target delivery 2 weeks (vibe code). `vi` default, `en` secondary. `.NET` backend + `Flutter` frontend mandatory (PRM393 30% compliance). `EXE201` tech-track.
 > **Status:** Draft for team confirmation. WBS will follow after approval.
 
@@ -14,7 +14,7 @@
 - EXE201 tech-track: marketable product, channel metrics (FB/Tiktok/Web), transaction evidence via escrow.
 
 **Non-Goals (post-2w):**
-- Clean Architecture 4 projects, MediatR/CQRS, Azure SignalR Service, Blob Storage, SMS OTP, admin panel — all deferred.
+- Clean Architecture 4 projects, MediatR/CQRS, Azure SignalR Service, Blob Storage, SMS OTP — all deferred.
 
 **Principle:** Single-project vertical slice, explicit `flutter_bloc` (gradable), manual `Select` projections, `EF Core` direct.
 
@@ -23,24 +23,22 @@
 ## 2. High-Level Architecture
 
 ```
-                ┌─────────────────┐
-                │  Flutter App    │
-                │  bloc + dio     │──────┐
-                │  signalr_client │      │ HTTPS + JWT (15m) + Refresh (7d)
-                └────────┬────────┘      │
-                         │ SignalR WS    ▼
-                ┌────────▼────────┐  ┌──────────────────┐
-                │  FCM Push       │  │  .NET 8 Web API  │
-                │  (killed-app)   │◄─┤  Minimal APIs    │
-                └─────────────────┘  │  SignalR Hubs    │
-                                     └──┬──────────┬────┘
-                                        │ EF Core 8│
-                          ┌─────────────▼──┐  ┌──▼──────────────┐
-                          │ SQL Server     │  │ wwwroot/uploads │
-                          │ (local dev)    │  │ (MVP static)    │
-                          │ Postgres Neon  │  └─────────────────┘
-                          │ (prod deploy)  │
-                          └────────────────┘
+                 ┌─────────────────┐
+                 │  Flutter App    │
+                 │  bloc + dio     │──────┐
+                 │  signalr_client │      │ HTTPS + JWT (15m) + Refresh (7d)
+                 └────────┬────────┘      │
+                          │ SignalR WS    ▼
+                 ┌────────▼────────┐  ┌──────────────────┐  ┌──────────────┐
+                 │  FCM Push       │  │  .NET 8 Web API  │◄─┤ Vite + React │
+                 │  (killed-app)   │◄─┤  Minimal APIs    │  │ landing+admin│
+                 └─────────────────┘  │  SignalR Hubs    │  │ (display-only│
+                                      └──┬──────────┬────┘  └──────────────┘
+                                         │ EF Core 8│  Npgsql only
+                           ┌─────────────▼──┐  ┌──▼──────────────┐
+                           │ Neon Postgres  │  │ wwwroot/uploads │
+                           │ dev+prod branch│  │ (MVP static)    │
+                           └────────────────┘  └─────────────────┘
 ```
 
 - **Realtime:** SignalR `ChatHub` + `NotificationHub` for foreground. FCM (`firebase_messaging`) only for background/killed.
@@ -126,7 +124,6 @@ Api/
 ### 4.2 Packages
 
 ```
-Microsoft.EntityFrameworkCore.SqlServer
 Npgsql.EntityFrameworkCore.PostgreSQL
 Microsoft.AspNetCore.Authentication.JwtBearer
 Microsoft.AspNetCore.SignalR
@@ -152,19 +149,19 @@ jobs.MapPost("/", async (CreateJobDto dto, AppDbContext db, ClaimsPrincipal user
 
 ### 4.4 Database
 
-- **Dev:** SQL Server LocalDB/Express (`UseSqlServer`). **Prod:** Postgres Neon/Supabase (`UseNpgsql`) — EF Core 95% abstracted, switch via connection string. Lecturer-friendly SSMS locally, zero-license prod.
-- **Migrations:** `dotnet ef migrations add Init` + `dotnet ef database update`. Keep migrations provider-agnostic (avoid `IDENTITY`/`jsonb` specifics in MVP).
+- **Neon Postgres only** (`UseNpgsql`, decided — no SQL Server anywhere): dev uses Neon `dev` branch, prod uses `prod` branch. Optional `postgres:16` in `deploy/compose.yml` for offline dev only.
+- **Migrations:** `dotnet ef migrations add Init` + `dotnet ef database update`. Concurrency via Postgres `xmin` (`uint Version` + `IsConcurrencyToken()`), never `rowversion`.
 - **Indexes:** `Jobs(OwnerId, Status, Category, CreatedAt)`, `Messages(ConversationId, CreatedAt)`, `Escrows(JobId)`.
 
 ### 4.5 Entity Summary (8 tables max)
 
 ```csharp
 User { Id Guid, Phone string PK, PasswordHash, Name, AvatarUrl, RatingAvg double, CurrentRole string, CreatedAt }
-Job { Id Guid, OwnerId FK, Title, Description, Category string, Price decimal, Status enum[Open/Assigned/Done/Cancelled], Lat double, Lng double, CreatedAt, RowVersion byte[] }
+Job { Id Guid, OwnerId FK, Title, Description, Category string, Price decimal, Status enum[Open/Assigned/Done/Cancelled], Lat double, Lng double, CreatedAt, Version uint xmin }
 JobApplication { JobId FK, WorkerId FK, PriceOffer, Status, PK(JobId,WorkerId) }
 Conversation { Id Guid, JobId FK, CreatedAt }
 Message { Id Guid, ConversationId FK, SenderId FK, Body, CreatedAt }
-Wallet { UserId PK FK, Balance decimal, RowVersion }
+Wallet { UserId PK FK, Balance decimal, Version uint xmin }
 WalletTransaction { Id Guid, UserId FK, Type enum[TopUp/Hold/Release/Refund], Amount decimal, RefJobId FK, CreatedAt } // append-only
 Escrow { Id Guid, JobId FK, PayerId FK, PayeeId FK, Amount decimal, Status enum[Held/Released/Refunded], HeldAt, ReleasedAt }
 RefreshToken { Id Guid, UserId FK, TokenHash string, ExpiresAt, RevokedAt nullable, ReplacedByToken nullable }
@@ -204,7 +201,7 @@ On first run, seed `Categories` + 2 sample jobs mirroring `lib/seed.ts:INITIAL_J
 | GET | `/api/me` | Yes | profile + wallet |
 | GET/POST | `/api/jobs` | Yes | list/create; query `?status,category,lat,lng,radius` |
 | GET | `/api/jobs/{id}` | Yes | detail |
-| POST | `/api/jobs/{id}/accept` | Yes (tasker) | lock with `RowVersion`, `Escrow Hold` tx |
+| POST | `/api/jobs/{id}/accept` | Yes (tasker) | lock with `xmin` concurrency token, `Escrow Hold` tx |
 | POST | `/api/jobs/{id}/report` | Yes (tasker) | `isCompletedReported` |
 | POST | `/api/jobs/{id}/release-escrow` | Yes (seeker) | `{rating,comment}` → `Escrow Released`, ledger tx |
 | GET/POST | `/api/conversations` | Yes | list/create per job |
@@ -258,7 +255,7 @@ Never `wallet.Balance -= price` directly.
 
 ```
 TopUp: WalletTransaction(+Amount) + Wallet.Balance += Amount
-Create/Accept Job (Hold): Wallet.Balance -= Amount + WalletTransaction(-Hold, RefJobId) + Escrow(Held)   — in DB transaction + RowVersion check
+Create/Accept Job (Hold): Wallet.Balance -= Amount + WalletTransaction(-Hold, RefJobId) + Escrow(Held)   — in DB transaction + xmin concurrency check
 Release (seeker confirms): Escrow.Status=Released + payee Wallet.Balance += Amount + WalletTransaction(+Release, payee)
 Refund/Cancel: Escrow.Refunded + payer +Amount
 ```
@@ -267,7 +264,7 @@ await using var tx = await db.Database.BeginTransactionAsync();
 try {
   var wallet = await db.Wallets.FirstAsync(w=>w.UserId==payerId);
   if (wallet.Balance < amount) return TypedResults.BadRequest("Insufficient");
-  wallet.Balance -= amount; // RowVersion concurrency
+  wallet.Balance -= amount; // xmin concurrency token
   db.WalletTransactions.Add(new WalletTransaction{ UserId=payerId, Type=Hold, Amount=-amount, RefJobId=jobId });
   db.Escrows.Add(new Escrow{ JobId=jobId, PayerId=payerId, PayeeId=payeeId, Amount=amount, Status=Held });
   await db.SaveChangesAsync();
@@ -284,9 +281,10 @@ Two-way 1-5 + comment, one per `Job` per direction, `CHECK (Rate BETWEEN 1 AND 5
 ## 9. DevOps, Config & Release
 
 - **Config:** `API_BASE_URL` via `--dart-define=API_BASE_URL=https://api.yourdomain` (dev `http://10.0.2.2:5000` for emulator, `http://localhost:5000` for iOS sim). Never hardcode.
-- **Hosting BE:** `Render Starter $7` or `Railway $5` (`git push` 3min, `dotnet publish -c Release -o out`, start `dotnet Api.dll`). Keep `Azure App Service F1 free` as backup for lecturer Microsoft-stack impression (needs AlwaysOn for SignalR). DB prod: `Neon` free Postgres (serverless, no 90d expiry).
-- **CORS:** `AllowFlutterOrigin` + `AllowCredentials` for SignalR.
-- **Flutter Release:** `keytool -genkey -v -keystore upload-keystore.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`, `android/key.properties`, `android/app/build.gradle` signing, `flutter build apk --release --dart-define=API_BASE_URL=...` → `build/app/outputs/flutter-apk/app-release.apk`. Test `adb install`. Also `flutter build web` for EXE201 channel demo if needed.
+- **Hosting BE:** `Render free` for testing (sleeps when idle — cold start 30-60s; upgrade to Starter $7 before demo day if it hurts). Start `dotnet Api.dll` with `$PORT`. DB: `Neon` free Postgres (`dev` + `prod` branches, pooled connection string). No SQL Server anywhere.
+- **Hosting web:** `web/dist` as Render static site ($0) pointing at the API URL.
+- **CORS:** `AllowFlutterOrigin + AllowWebOrigin` + `AllowCredentials` for SignalR.
+- **Flutter Release:** `keytool -genkey -v -keystore upload-keystore.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`, `android/key.properties`, `android/app/build.gradle` signing, `flutter build apk --release --dart-define=API_BASE_URL=...` → `build/app/outputs/flutter-apk/app-release.apk`. Test `adb install`. Web demo = Vite `web/` (task 12), not `flutter build web`.
 - **CI (optional):** GitHub Actions: `dotnet build/test` + `flutter analyze/test` on PR.
 
 ---
@@ -327,13 +325,13 @@ Target 5-10 tests — AI generates in 30min; lecturer checks folder existence, n
 | D4 | Map `lat/lng` + Board list geospatial query | Map screen | **Outcome 1 draft:** MVP + 3 product levels + Financial plan |
 | D5 | Chat REST + SignalR `ChatHub` + Flutter hub service | Chat + State mgmt | — |
 | D6 | Notifications Hub + FCM stub + tray | Notifications screen | Channel setup FB/Insta/Tiktok |
-| D7 | Wallet/Escrow ledger tx + `RowVersion` + balance/transactions endpoints | Billing/Checkout (escrow) + Cart (job selection) | Revenue KPI |
+| D7 | Wallet/Escrow ledger tx + `xmin` concurrency + balance/transactions endpoints | Billing/Checkout (escrow) + Cart (job selection) | Revenue KPI |
 | D8 | Ratings (two-way) + `Review` + avg update | Rating | — |
 | D9 | Profile + RoleSwitch (single user dual Roles) + edit + avatar upload | Role mgmt | Staffing plan |
 | D10 | i18n `vi` + polish tokens (`orange/teal`, FontAwesome) + empty states | i18n | MKT content plan |
 | D11 | Tests: 4 unit + 2 widget + Swagger Scalar + seed | Tests gate | Feedback form prep |
-| D12 | Validation `FluentValidation`, error handling, pagination | Validation | Feedback >=20 mock |
-| D13 | Deploy BE to Render + Neon + `flutter build apk --release` + `10.0.2.2`→prod URL | Hosted URL + APK | Deploy web demo |
+| D12 | Validation `FluentValidation`, error handling, pagination + web admin (task 12 parallel) | Validation | Feedback >=20 mock |
+| D13 | Deploy API to Render free + Neon prod + `flutter build apk --release` + `10.0.2.2`→prod URL + web static | Hosted URL + APK | Deploy web demo |
 | D14 | Demo script 15min + backup APK + recording + report outline | Demo + Report skeleton | Outcome 1 final PDF |
 
 Buffer: if blocked, defer FCM (use foreground hub only) and Postgres PostGIS.
@@ -345,17 +343,17 @@ Buffer: if blocked, defer FCM (use foreground hub only) and Postgres PostGIS.
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Flutter↔.NET JWT mismatch | 401 loop | Use HS256 + `accessTokenFactory`, test `curl` first, log `TokenValidationParameters` |
-| Escrow race (2 taskers accept same job) | Negative balance, double escrow | `RowVersion` + transaction + unique `Escrows(JobId)` + `Conflict 409` retry |
+| Escrow race (2 taskers accept same job) | Negative balance, double escrow | `xmin` + transaction + unique `Escrows(JobId)` + `Conflict 409` retry |
 | Hardcoded `localhost:5000` in APK | Demo fails on device | `--dart-define` + `10.0.2.2` emulator switch, never commit URL |
 | Clean Arch over-engineering | -2 days | Stay single project; inject `AppDbContext` directly |
 | Marketplace cold-start (EXE201 orders) | No transaction bills | Sell `gói dịch vụ` where team = tasker; classmates as first customers; log every escrow as bill |
-| Scope creep (admin panel, OTP) | Miss 2w | Defer admin/OTP to post-MVP; `verified=false` placeholder suffices |
+| Scope creep (OTP, S3 day-1) | Miss 2w | Web admin stays display-only (task 12); OTP/S3 deferred; `verified=false` placeholder suffices |
 
 ---
 
 ## 13. Decisions — Confirm with Team (blocking WBS)
 
-1. **DB prod:** Keep SQL Server everywhere (simpler) or switch prod to Postgres Neon (free, no license)?
+1. **DB prod:** ~~Keep SQL Server everywhere or switch prod to Postgres Neon?~~ DECIDED: Neon Postgres only (dev+prod branches).
 2. **Map:** `google_maps_flutter` (needs API key, better) vs `flutter_map` OSM (free, no key)?
 3. **Upload:** `wwwroot/uploads` MVP acceptable or require S3/Cloudinary day-1?
 4. **State granularity:** `Cubit` for profile/filter + `Bloc` for chat/wallet — agreed?
@@ -368,7 +366,7 @@ Buffer: if blocked, defer FCM (use foreground hub only) and Postgres PostGIS.
 
 If team approves this stack:
 - **WBS Phase:** L1 `Initiating` → L2 `Planning` → L3/L4 work packages with `Responsibility Assignment Matrix (RAM)` per FPT `PMG393` Ch.5 Pinto p.172/199 — pre-mapped to 2-week sprints + EXE201 outcomes.
-- **Repo bootstrap:** `Api/`, `app_flutter/`, `docs/` with this doc as `docs/TECH_STACK_PLAN.md`.
+- **Repo bootstrap:** `Api/`, `app_mobile/`, `web/`, `docs/` with this doc as `docs/TECH_STACK_PLAN.md`.
 
 > **Approval:** Reply `Approved` or comment on decisions 1-6. Changes will be versioned `v1.1`.
 
