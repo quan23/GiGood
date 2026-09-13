@@ -1,6 +1,6 @@
 # 06 — Wallet Escrow Ledger + xmin Concurrency + Billing/Cart
 
-**Goal:** Replace single global `escrowHeldPool` number with real ledger satisfying PRM393 `Billing/Cart` via booking cart + escrow checkout.
+**Goal:** Replace single global `escrowHeldPool` number with a real ledger: booking cart + escrow checkout + accept/hold/release/topup wiring.
 
 **Depends:** 01, 02. **Branch:** `feat/06-escrow` off `master`.
 
@@ -11,35 +11,35 @@
 - Flows:
   - `TopUp POST /api/wallet/topup {amount}` (stub for testing, adds `+Amount` tx + `Wallet.Balance+=`).
   - `POST /api/jobs/{id}/accept (tasker)` -> ledger tx: `payer Wallet.Balance -= amount` + `WalletTransaction Hold -amount` + `Escrows Held` + `Job.Status=Assigned` + `JobApplications` row. Concurrency `xmin` token check, unique `Escrows(JobId)` prevents double-accept `409`.
-  - `POST /api/jobs/{id}/release-escrow {rating?, comment?}` (seeker) -> `Escrow Released`, payee `Wallet.Balance += amount` + `Release +amount` + `Job.Status=Done`. Rating optional here — `Review` row created by 07 flow if provided, else skipped (decouples 06→07, GLM P8). Validates `Escrow exists & Held & caller is payer (DB CurrentRole, not claim)`.
-  - `POST /api/jobs/{id}/cancel (owner, allowed when Status Open|Assigned+not-reported)` -> if Held escrow exists → `Refund` payer +Amount + Escrow Refunded; else no ledger. `POST /api/jobs/{id}/refund` (tasker abandons when Held) same refund path. Unique Escrows(JobId) + status transitions `Held→Released|Refunded` allow re-accept only after Refunded (new Escrow row or status reset — define in code, GLM P8).
+  - `POST /api/jobs/{id}/release-escrow {rating?, comment?}` (seeker) -> `Escrow Released`, payee `Wallet.Balance += amount` + `Release +amount` + `Job.Status=Done`. Rating optional here — `Review` row created by 07 flow if provided, else skipped (decouples 06→07). Validates `Escrow exists & Held & caller is payer (DB CurrentRole, not claim)`.
+  - `POST /api/jobs/{id}/cancel (owner, allowed when Status Open|Assigned+not-reported)` -> if Held escrow exists → `Refund` payer +Amount + Escrow Refunded; else no ledger. `POST /api/jobs/{id}/refund` (tasker abandons when Held) same refund path. Unique Escrows(JobId) + status transitions `Held→Released|Refunded` allow re-accept only after Refunded.
 
 **Entities:**
-- `Wallets(UserId PK FK->Users, Balance decimal(18,0) CHECK (Balance>=0), Version uint → xmin via IsConcurrencyToken())` 1-row per user, created on register with `Balance 1_420_000|2_850_000` mimic seed for demo but real. Neon-only (decided). Broadcast SignalR only after `CommitAsync`.
+- `Wallets(UserId PK FK->Users, Balance decimal(18,0) CHECK (Balance>=0), Version uint → xmin via IsConcurrencyToken())` 1-row per user, created on register with `Balance 1_420_000|2_850_000` mimic seed for demo but real. Neon-only. Broadcast SignalR only after `CommitAsync`.
 - `WalletTransactions` append-only index `UserId, CreatedAt desc`.
 - `Escrows` unique `JobId`, index `PayerId, PayeeId`.
 
-**Flutter:**
-- `WalletBloc` states `BalanceLoaded(balance, escrowHeld)`, `TransactionsLoaded`.
-- Cart = booking cart: `CartCubit` holds `selected JobIds` (multi-select on board) -> checkout `ReleaseEscrow` per job or `Accept` flow.
-- UI `wallet card` in header `formatVnd` + `earnings_page` stat cards `totalEarnings sum Release`, `history_page` completed jobs with `ReleaseEscrow` button `Xác nhận & Giải ngân` rating 5 as demo.
+**Mobile (Expo):**
+- `useWallet` keeps its demo surface: `{balance, escrowHeld, transactions, topUp}` backed by React Query.
+- Cart = booking cart: `CartContext` holds `selected JobIds` (multi-select on board) -> checkout `ReleaseEscrow` per job or `Accept` flow.
+- UI wallet card in header `formatVnd` + earnings screen stat cards `totalEarnings sum Release`, history screen completed jobs with `Xác nhận & Giải ngân` button.
 
 **Files to touch:**
 - `Api/Features/Wallet/*`, `Api/Features/Escrows/*`, `Api/Data/AppDbContext.cs`, `Api/Features/Jobs/JobsEndpoints.cs` add accept/release logic.
-- `app_mobile/lib/features/wallet/{data/*, presentation/bloc/wallet_bloc.dart, presentation/cubit/cart_cubit.dart, pages/wallet_page.dart, pages/transactions_page.dart}`, header `useWallet` refactor.
+- `app_mobile/lib/features/wallet/{api.ts, types.ts, hooks/useWallet.ts, context/CartContext.tsx, screens/wallet.tsx, screens/transactions.tsx}`, header `useWallet` refactor.
 
 **Steps:**
 1. Migration `WalletEscrowInit` add 3 tables + `Version uint` mapped to `xmin` (`IsConcurrencyToken()`).
 2. Implement `TopUp` for testing + `Balance/Transactions/Escrows` GETs.
 3. Implement `Hold` tx in `accept`: `await using var tx = await db.Database.BeginTransactionAsync(); try { wallet.Balance -= amount; db.WalletTransactions.Add(Hold); db.Escrows.Add(Held); job.Status=Assigned; await db.SaveChangesAsync(); await tx.CommitAsync(); } catch (DbUpdateConcurrencyException) => 409 "Retry"`.
 4. Implement `Release` similarly.
-5. Flutter `WalletBloc` poll `GET /wallet/balance` on resume + after accept/release events via `NotificationHub` `EscrowReleased`.
+5. Expo `useWallet` refetch on app focus + after accept/release events via `NotificationHub` `EscrowReleased`.
 6. Replace `seekerWallet/taskerWallet` demo numbers with `GET /wallet/balance`.
 
 **Acceptance:**
 - Two concurrent `POST /jobs/:id/accept` from two taskers -> one `201` + escrow held, other `409`.
 - `GET /wallet/balance` before accept `1_420_000`, after accept `1_270_000` + `escrowHeld 150_000`, after release payer `1_270_000` payee `3_000_000`, ledger history matches.
-- Flutter wallet card updates without restart.
+- Expo wallet card updates without restart.
 
 **Verification:**
 ```bash
@@ -47,7 +47,7 @@ dotnet ef migrations add WalletEscrowInit
 dotnet build Api/
 # concurrent curl test
 curl -H "Authorization: Bearer $SEEKER" http://localhost:5000/api/wallet/balance | jq .
-flutter analyze
+(cd app_mobile && npx tsc --noEmit)
 ```
 
 **Commit:** `feat(wallet): escrow ledger + xmin + billing/cart (#06)`

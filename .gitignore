@@ -34,24 +34,14 @@ publish/
 TestResults/
 coverage/
 
-# --- Flutter ---
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-build/
-*.lock
-.pub-cache/
-.pub/
+# --- Expo / React Native ---
+app_mobile/node_modules/
+app_mobile/.expo/
+app_mobile/dist/
+app_mobile/android/
+app_mobile/ios/
 *.apk
 *.aab
-*.ipa
-ios/Pods/
-android/.gradle/
-android/app/build/
-android/local.properties
-**/android/key.properties
-**/upload-keystore.jks
 
 # --- Node (if any tooling) ---
 node_modules/

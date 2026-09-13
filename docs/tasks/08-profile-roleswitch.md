@@ -11,29 +11,30 @@
 - `POST /api/me/switch-role {role:seeker|tasker} -> 200 {role, token?}` (single user dual roles, no second register; if taskerProfile null and switching to tasker -> 400 "complete profile first").
 - `POST /api/me/verify` stub -> `200 {verified:false}` placeholder (real KYC deferred).
 
-**Flutter:**
-- `ProfileBloc`/`Cubit` handles `LoadProfile, UpdateProfile, UploadAvatar, SwitchRole`.
-- `profile_page` avatar 64 `rounded-full` teal/orange border, `Đồng` tier, wallet cards, `skills` chips `CATEGORY_META`, `bio`, `availability/vehicle` labels, phone/location rows, `Đăng xuất` -> `revoke + deleteAll`.
-- Header `SegmentedToggle` role switcher calls `POST /me/switch-role` + `switchRole()` + `router.replace(post|board)` + `get_it` reset blocs.
-- `signup-tasker-profile` reuse `CategoryGrid` 4 chips multi-select + `availability` dropdown + `vehicle` + ID placeholder banner.
+**Mobile (Expo):**
+- `useSeeker`/`useTasker` surfaces extended with profile state; `useAuth` gains `switchRole()`.
+- `lib/features/profile/hooks/useProfile.ts` handles `loadProfile, updateProfile, uploadAvatar, switchRole`.
+- profile screen avatar 64 `rounded-full` teal/orange border, `Đồng` tier, wallet cards, `skills` chips `CATEGORY_META`, `bio`, `availability/vehicle` labels, phone/location rows, `Đăng xuất` -> `revoke + clear SecureStore`.
+- Header `SegmentedToggle` role switcher calls `POST /me/switch-role` + `router.replace(post|board)`.
+- signup-tasker-profile reuses `CategoryGrid` 4 chips multi-select + `availability` dropdown + `vehicle` + ID placeholder banner.
 
 **Files to touch:**
 - `Api/Features/Users/*`, `Api/Features/Auth/*` switch endpoint, `Api/Data/AppDbContext.cs`.
-- `app_mobile/lib/features/auth/presentation/bloc/auth_bloc.dart` add `SwitchRoleRequested`, `app_mobile/lib/features/profile/{pages/profile_page.dart, cubit/profile_cubit.dart, widgets/avatar_picker.dart}`, `app_mobile/lib/hooks/useAuth` ported to bloc.
+- `app_mobile/lib/features/auth/hooks/useAuth.ts` add `switchRole`, `app_mobile/lib/features/profile/{screens/profile.tsx, hooks/useProfile.ts, components/AvatarPicker.tsx}`, `app_mobile/lib/hooks/useSeeker.ts`/`useTasker.ts` preserve surface.
 
 **Steps:**
 1. Migration if `TaskerProfile` columns missing (`Skills jsonb/string`, `Bio`, `Availability`, `Vehicle`, `Verified bool`).
 2. Endpoints `RequireAuthorization`, verify taskerProfile exists before switch.
-3. Flutter `image_picker` `pickImage(source: ImageSource.gallery)` -> `FormData` -> `POST /me/avatar` -> update `User` in `AuthBloc`.
+3. Expo `expo-image-picker` `launchImageLibraryAsync` -> `FormData` -> `POST /me/avatar` -> update user in query cache.
 4. Wire `SegmentedToggle` 2 options `Người Thuê` orange vs `Người Nhận` teal active `bg-white shadow-sm`.
 
 **Acceptance:**
-- Edit name/location/bio -> `GET /me` returns new; upload avatar -> shows `cached_network_image` without restart; switch role seeker<->tasker without logout; switching to tasker without profile blocks with toast `Vui lòng hoàn thành hồ sơ tasker`.
+- Edit name/location/bio -> `GET /me` returns new; upload avatar -> shows via `expo-image` without restart; switch role seeker<->tasker without logout; switching to tasker without profile blocks with toast `Vui lòng hoàn thành hồ sơ tasker`.
 
 **Verification:**
 ```bash
 dotnet build Api/
-flutter analyze
+(cd app_mobile && npx tsc --noEmit)
 curl -H "Authorization: Bearer $AT" -X PATCH http://localhost:5000/api/me -H "Content-Type: application/json" -d '{"name":"Vy 2"}' | jq .
 ```
 

@@ -1,51 +1,45 @@
-# 10 — Tests + Swagger Scalar + Seed Polish
+# 10 — Jest Smoke Test + Swagger + Seed Polish
 
-**Goal:** Satisfy PRM393 `1 Unit + 1 Widget` mandatory gates + grader-visible Swagger.
+**Goal:** Exactly **1 Jest smoke test** + grader-visible Swagger + deterministic seed.
 
 **Depends:** 01-08. **Branch:** `feat/10-tests` off `master`.
 
 **API contract:**
-- `GET /swagger` Scalar UI + `GET /openapi.json` + `GET /health`.
+- `GET /swagger` Swashbuckle UI + `GET /swagger/v1/swagger.json` + `GET /health`.
 - No new endpoints; validate existing.
 
-**Flutter tests:**
-- Unit `test/unit/format_vnd_test.dart` `formatVnd(150000) == "150.000 VND"` + `test/unit/auth_bloc_test.dart` `blocTest<AuthBloc, AuthState>('login emits [Loading, Authenticated]' ...)` + `test/unit/wallet_ledger_test.dart` logic pure.
-- Widget `test/widget/job_card_test.dart` `pump JobCard(job: fake)` -> `expect find.text title, expect budget`, `test/widget/chat_bubble_test.dart`, `test/widget/star_row_test.dart` interactive tap -> `onChange(3)`.
-- Use `bloc_test`, `mocktail`, `fake_async` for timer-free radar test.
-- Add `test/helpers/fake_jobs.dart` reused.
-
-**Backend (optional BE test, not required but + points):**
-- `Api.Tests/JwtProviderTests.cs` xUnit + `EscrowConcurrencyTests` with 2 parallel `Accept` -> one 409.
+**Tests (exactly one):**
+- `app_mobile/__tests__/smoke.test.tsx` — render the root/home screen (or `JobCard` with a fake job) with `@testing-library/react-native` and assert a known vi string renders. Configure `jest-expo` preset in `package.json` (`"test": "jest"`, `"jest": {"preset": "jest-expo"}`).
+- Do not add a test suite beyond this one smoke test in this task.
 
 **Swagger/Seed:**
-- `Program.cs` `app.MapOpenApi()` + Scalar `app.MapScalarApiReference("/swagger", o => o.WithTitle("GiGood API"))` (or `Swashbuckle` fallback). Ensure `RequireAuthorization` shows lock icon but allows `Authorize` Bearer.
+- `Program.cs` Swashbuckle on .NET 8 (`Swashbuckle.AspNetCore`) at `/swagger`, `RequireAuthorization` shows lock icon but allows `Authorize` Bearer.
 - `Api/Data/Seeder.cs` polish: ensure 2 seed jobs + 3 `SAMPLE_TASKERS` avatars `https://placehold.co/100x100` + wallets `1_420_000 / 2_850_000 / escrow 150_000` on `if (!Users.Any())`, idempotent.
 
 **Files to touch:**
-- `Api/Program.cs`, `Api/Data/Seeder.cs`, `Api/Api.csproj` ensure `Microsoft.AspNetCore.OpenApi`.
-- `app_mobile/test/{unit/*, widget/*, helpers/*}`, `app_mobile/pubspec.yaml` already has deps from 00.
+- `Api/Program.cs`, `Api/Data/Seeder.cs`, `Api/Api.csproj` ensure `Swashbuckle.AspNetCore`.
+- `app_mobile/__tests__/smoke.test.tsx`, `app_mobile/package.json` add `jest`, `jest-expo`, `@testing-library/react-native` (dev only).
 
 **Steps:**
-1. Add `builder.Services.AddOpenApi()` + `app.MapOpenApi()` + `app.MapScalarApiReference` (install `Scalar.AspNetCore` if needed).
-2. Create `test/unit` 3 files + `test/widget` 3 files, run `flutter test --coverage`.
-3. Run `dotnet test` if BE tests added else `dotnet build` only.
-4. Verify `curl -s http://localhost:5000/openapi.json | jq .info.title`.
+1. Confirm Swashbuckle wired at `/swagger` with bearer security definition.
+2. Add the single Jest smoke test and `jest-expo` config.
+3. Run `dotnet build Api/` and `npm test` (app_mobile) to green.
+4. Verify `curl -s http://localhost:5000/swagger/v1/swagger.json | jq .info.title`.
 
 **Acceptance:**
-- `flutter test` green >=5 tests, `flutter analyze` green, `dotnet build` green.
+- `npm test` (app_mobile) green with 1 smoke test; `npx tsc --noEmit` green; `dotnet build Api/` green.
 - `http://localhost:5000/swagger` shows `Auth, Jobs, Chat, Wallet, Ratings, Notifications, Upload` with Try-it + Bearer auth.
 - Fresh DB `dotnet ef database update` seeds 2 jobs + wallets deterministically.
 
 **Verification:**
 ```bash
 dotnet build Api/
-dotnet test Api.Tests/  # if exists
 curl -s http://localhost:5000/health | grep ok
-curl -s http://localhost:5000/openapi.json | head -20
-flutter test
-flutter analyze
+curl -s http://localhost:5000/swagger/v1/swagger.json | head -20
+(cd app_mobile && npm test)
+(cd app_mobile && npx tsc --noEmit)
 ```
 
-**Commit:** `test(fe): unit+widget + swagger + seed (#10)`
+**Commit:** `test(fe): jest smoke + swagger + seed (#10)`
 
-**Notes:** Lecturer checks `test/` folder existence + `swagger` URL screenshotted in report. Do not aim for 80% coverage — demonstrate pattern.
+**Notes:** Lecturer checks `__tests__/` existence + the `swagger` URL screenshotted in the report. One smoke test demonstrates the pattern; do not chase coverage.

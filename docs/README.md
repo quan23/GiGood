@@ -2,7 +2,7 @@
 
 Shareable team docs only. Everything here is committed and visible to teammates.
 
-- `TECH_STACK_PLAN.md` — Approved stack for Flutter + .NET 8 rebuild. Single source of truth.
+- `TECH_STACK_PLAN.md` — Approved stack for the **Expo + Vite + .NET 8** rebuild. Single source of truth.
 
 ## Rules
 
