@@ -1,6 +1,6 @@
 # BACKEND — Features + API Endpoints (from old Expo demo)
 
-> Source: old demo `EXE101/GiGood` (`types/index.ts`, `lib/seed.ts`, `lib/GiGoodContext.tsx` 25 actions, 8 hooks, 5 auth + 9 app screens). This doc is the backend contract for 3-project monorepo: `Api/` (.NET, deploy) + `web/` (web FE, deploy) + `app_mobile/` (Flutter, store/APK).
+> Source: old demo `EXE101/GiGood` (`types/index.ts`, `lib/seed.ts`, `lib/GiGoodContext.tsx` 25 actions, 8 hooks, 5 auth + 9 app screens). This doc is the backend contract for 3-project monorepo: `Api/` (.NET, deploy) + `web/` (web FE, deploy) + `app_mobile/` (Expo, EAS APK).
 > Related: `TECH_STACK_PLAN.md` (stack), `BACKLOG.md` + `tasks/*` (build order), `OPINIONS.md` (P1-P10 fixes — applied here).
 
 ## 0. Monorepo layout (new)
@@ -9,7 +9,7 @@
 GiGood/
   Api/              # .NET 8 Web API (Minimal APIs vertical slice) — DEPLOY (Render free + Neon)
   web/              # Web frontend (deploy: Vercel/Render static) — coming after backend
-  app_mobile/       # Flutter mobile app (APK/AppBundle) — coming after backend
+  app_mobile/       # Expo mobile app (EAS APK) — coming after backend
   deploy/           # compose.yml, render.yaml, .env.example
   docs/             # shareable (this file + plans)
 ```

@@ -1,7 +1,7 @@
 # GiGood Rebuild — Tech Stack Plan
 
-> **Source:** `EXE101` demo `GiGood` (Expo SDK 54 + RN + NativeWind) used as Figma/spec only. Not a port. Full rebuild: **Flutter (mobile) + Vite+React (web landing + display-only admin) + .NET 8 (BE) + Neon Postgres** — keep tokens/flows, discard reducer/timers.
-> **Constraints:** Old team, new project. Deadline 11 weeks, target delivery 2 weeks (vibe code). `vi` default, `en` secondary. `.NET` backend + `Flutter` frontend mandatory (PRM393 30% compliance). `EXE201` tech-track.
+> **Source:** `origin/demo` — old `EXE101` `GiGood` (Expo SDK 54 + RN + NativeWind) used as the base for an **Expo refactor**, not a rebuild. Stack: **Expo (React Native) + Vite + React (web) + .NET 8 (BE) + Neon Postgres**.
+> **Constraints:** Old team, new project. Deadline 11 weeks, target delivery 2 weeks (vibe code). `vi`-only hardcoded strings for MVP (`en` deferred). `.NET` backend + Expo mobile mandatory. `EXE201` tech-track only.
 > **Status:** Draft for team confirmation. WBS will follow after approval.
 
 ---
@@ -9,14 +9,13 @@
 ## 1. Goals & Non-Goals
 
 **Goals (2-week MVP must ship):**
-- Real auth, persisted jobs, chat, map, wallet/escrow ledger, ratings, notifications, role switch, profile — replacing `lib/GiGoodContext.tsx` in-memory.
-- PRM393 gates: DB/API, 10 screens (login, product list/detail, cart/escrow-checkout, notifications, map, chat, state mgmt), release APK, 1 unit + 1 widget test, Swagger/hosted URL.
-- EXE201 tech-track: marketable product, channel metrics (FB/Tiktok/Web), transaction evidence via escrow.
+- Real auth, persisted jobs, chat, map, wallet/escrow ledger, ratings, notifications, role switch, profile — replacing `lib/GiGoodContext.tsx` in-memory state with server state.
+- EXE201 tech-track outcomes only: Outcome 1 MVP (marketable product + 3 product levels + financial plan), channel metrics (FB/TikTok/Web), transaction evidence via the escrow ledger.
 
 **Non-Goals (post-2w):**
-- Clean Architecture 4 projects, MediatR/CQRS, Azure SignalR Service, Blob Storage, SMS OTP — all deferred.
+- Full i18n library (MVP ships `vi`-only hardcoded strings), remote/background push (local notifications only), real map SDK/key (demo visual + real `lat/lng`), Clean Architecture/MediatR/CQRS, Blob/S3 storage, SMS OTP — all deferred.
 
-**Principle:** Single-project vertical slice, explicit `flutter_bloc` (gradable), manual `Select` projections, `EF Core` direct.
+**Principle:** Refactor the Expo demo into a single vertical slice; keep the existing hook surface, replace reducer internals with React Query + context. .NET Minimal APIs direct (`AppDbContext`), no extra abstraction.
 
 ---
 
@@ -24,14 +23,14 @@
 
 ```
                  ┌─────────────────┐
-                 │  Flutter App    │
-                 │  bloc + dio     │──────┐
-                 │  signalr_client │      │ HTTPS + JWT (15m) + Refresh (7d)
+                 │  Expo App       │
+                 │  expo-router 5  │──────┐ HTTPS + JWT (15m) + Refresh (7d)
+                 │  axios + RN     │      │
                  └────────┬────────┘      │
-                          │ SignalR WS    ▼
+                          │ SignalR WS     ▼
                  ┌────────▼────────┐  ┌──────────────────┐  ┌──────────────┐
-                 │  FCM Push       │  │  .NET 8 Web API  │◄─┤ Vite + React │
-                 │  (killed-app)   │◄─┤  Minimal APIs    │  │ landing+admin│
+                 │  Local notifs   │  │  .NET 8 Web API  │◄─┤ Vite + React │
+                 │  (in-app tray)  │◄─┤  Minimal APIs    │  │ landing+admin│
                  └─────────────────┘  │  SignalR Hubs    │  │ (display-only│
                                       └──┬──────────┬────┘  └──────────────┘
                                          │ EF Core 8│  Npgsql only
@@ -41,62 +40,59 @@
                            └────────────────┘  └─────────────────┘
 ```
 
-- **Realtime:** SignalR `ChatHub` + `NotificationHub` for foreground. FCM (`firebase_messaging`) only for background/killed.
-- **Why not Firebase/Supabase as primary:** PRM393 requires visible `.NET` DB/API; BaaS bypasses grading.
+- **Realtime:** SignalR `ChatHub` + `NotificationHub` for foreground in-app notifications.
+- **Why not Firebase/Supabase as primary:** Neon Postgres + .NET API keeps visible DB/API ownership for the EXE201 build.
 
 ---
 
-## 3. Frontend — Flutter
+## 3. Frontend — Expo (React Native)
 
 ### 3.1 Version & Tooling
 
-- **Flutter 3.22+ / Dart 3.4+,** `flutter_bloc 8.1.6`, `build_runner` + `freezed` + `json_serializable`, `get_it` + `injectable` (DI), `go_router 14`, `dio 5.4` + `pretty_dio_logger`, `flutter_secure_storage 9`, `easy_localization 3.0.7`, `signalr_netcore 1.3.6`, `google_maps_flutter 2.9` (or `flutter_map` if no API key), `cached_network_image`, `image_picker`, `intl`, `equatable`.
+- **Expo SDK 54**, `expo-router 5` (file-based routes), TypeScript, **NativeWind 4**, `constants/theme.ts` design tokens (orange `#ea580c` / teal `#0f766e`, rounded-2xl, stone border), `@tanstack/react-query` (server state), `axios` (HTTP + refresh interceptor), `@microsoft/signalr` (chat), `expo-secure-store` (tokens), `expo-image-picker` (upload), `@expo/vector-icons` (FontAwesome).
+- Env: `EXPO_PUBLIC_API_BASE_URL` (dev `http://10.0.2.2:5000` emulator) and `EXPO_PUBLIC_USE_MOCK=1`.
 
-### 3.2 Why `flutter_bloc` (not Riverpod/Provider)
+### 3.2 Refactor Rule
 
-- PRM393 rubric says `Provider/Bloc` — `Bloc` = explicit `Event -> Bloc -> State -> BlocBuilder` = lecturer scores it. `bloc_test` trivial for required tests. AI generates boilerplate perfectly.
-- Riverpod's `autoDispose` silently resets state; Provider too simple for chat/wallet. Use `Cubit` for simple screens (profile/filter), `Bloc` for chat/escrow.
+- Keep the existing hook surface: `useAuth`, `useJobs`, `useChat`, `useWallet`, `useSeeker`, `useTasker`, `useNotifications`, `useUi`.
+- Replace `GiGoodContext` reducer internals with React Query for server state + a thin context for session (`useAuth`) and UI state (`useUi`). Screen components stay; only the data plumbing changes.
+- Mock switch: `EXPO_PUBLIC_USE_MOCK=1` serves seeded data through the same hooks so FE can run ahead of BE.
 
 ### 3.3 Project Structure
 
 ```
-lib/
-  core/
-    network/dio_client.dart          # QueuedInterceptorsWrapper: attach JWT, 401=>refresh=>retry
-    di/injection.dart                # get_it + injectable
-    router/app_router.dart           # go_router + auth redirect guard
-    l10n/                            # easy_localization delegates
-  features/
-    auth/{data/{datasources/auth_api.dart, models/user_model.dart}, presentation/bloc/auth_bloc.dart, pages/login_page.dart}
-    jobs/{data, presentation/bloc, pages/{post_page, board_page, jobs_page, detail_page}}
-    chat/{hub/chat_hub_service.dart, bloc/chat_bloc.dart}
-    wallet/{bloc/wallet_bloc.dart}   # escrow ledger
-    rating, notifications, profile
-  shared/widgets/{job_card.dart, chat_bubble.dart, star_row.dart}
-assets/
-  translations/vi.json  # default
-  translations/en.json
-test/
-  unit/auth_bloc_test.dart
-  widget/job_card_test.dart
+app_mobile/
+  app/
+    (auth)/{index.tsx, role-select.tsx, signup-basic.tsx, signup-tasker-profile.tsx, login.tsx}
+    (app)/_layout.tsx
+    (app)/{post.tsx, board.tsx, jobs.tsx, active.tsx, chat.tsx, profile.tsx, notifications.tsx}
+    (app)/job/[id].tsx
+    (app)/chat/[id].tsx
+  src/
+    api/client.ts               # axios instance + 401=>refresh=>retry interceptor
+    api/{auth.ts, jobs.ts, chat.ts, wallet.ts, ratings.ts, upload.ts}
+    hooks/{useAuth,useJobs,useChat,useWallet,useSeeker,useTasker,useNotifications,useUi}.ts
+    stores/                     # context session + UI (replaces GiGoodContext reducer)
+    mock/                       # seeded jobs/taskers behind EXPO_PUBLIC_USE_MOCK
+  constants/theme.ts            # orange #ea580c / teal #0f766e tokens
+  assets/
 ```
 
 ### 3.4 Keep vs Discard from Demo
 
-- **Keep as spec:** `tailwind.config.js` `orange #ea580c / teal #0f766e / rounded-2xl / stoneBorder` → `ThemeData` + `AppColors`; `Inter/Poppins` → `TextTheme`; `FontAwesome` → `font_awesome_flutter`; flows `Welcome→RoleSelect→SignupBasic→TaskerProfile→(post/jobs/chat/history|board/active/chat/earnings)`; `types/index.ts` shapes `Role/Category/Availability/Vehicle/JobStatus`; `CATEGORY_META`/`AVAILABILITY_LABEL`/`VEHICLE_LABEL`; `formatVnd` → `intl NumberFormat('vi_VN')`; `ToastVariant`.
-- **Discard:** `lib/GiGoodContext.tsx` reducer + `nextJobId=300` + `lib/seed.ts` seeds; timers `setInterval 1s` radar / `Animated.loop` pulse / `Toast 2500ms`; `QUICK_LOGIN` hardcode; `mapX/Y %` → `double lat/lng`; single global `escrowHeldPool`.
+- **Keep as spec:** `tailwind.config.js` colors (orange `#ea580c` / teal `#0f766e`, `rounded-2xl`, stone border) → `constants/theme.ts`; font stacks (`Inter/Poppins`); icon set (`@expo/vector-icons` FontAwesome); flows `Welcome→RoleSelect→SignupBasic→TaskerProfile→(post/jobs/chat/history|board/active/chat/earnings)`; `types/index.ts` shapes `Role/Category/Availability/Vehicle/JobStatus`; `CATEGORY_META`/`AVAILABILITY_LABEL`/`VEHICLE_LABEL`; `formatVnd`; `ToastVariant`.
+- **Discard:** `lib/GiGoodContext.tsx` reducer + `nextJobId=300` + `lib/seed.ts` in-memory seeds (move to `src/mock` + BE seed); timers `setInterval 1s` radar / `Animated.loop` pulse / `Toast 2500ms`; `QUICK_LOGIN` hardcode; `mapX/Y %` → `double lat/lng`; single global `escrowHeldPool`.
 
 ### 3.5 State Slices
 
-- `AuthBloc` — `AuthInitial/Loading/Authenticated(user)/Unauthenticated/Error` + events `LoginRequested, RegisterRequested, Logout, Refresh`.
-- `JobsBloc` — `JobsLoad, PostJob, AcceptJob, ReportCompleted, ReleaseEscrow`.
-- `ChatBloc` — `JoinJobGroup, SendMessage, ReceiveMessage, Typing`.
-- `WalletBloc` — ledger view, balance via `GET /api/wallet/balance`.
+- **Session (`useAuth`)** — context: `{ user, accessToken, login, register, logout }`; tokens in `expo-secure-store`.
+- **Server (React Query)** — `useJobs` (list/post/accept/report/release), `useChat` (conversations/messages), `useWallet` (balance/transactions), `useNotifications`.
+- **UI (`useUi`)** — role switch, active tab, toast, loading overlays.
 
 ### 3.6 Navigation
 
-`go_router` declarative:
-`/ (splash) → /welcome → /role-select → /signup-basic → /signup-tasker-profile → /(app)/post (seeker) | /(app)/board (tasker) -> /job/:id, /chat/:id, /profile, /notifications`. Guard: `redirect: (ctx, state) => token==null ? '/welcome' : null`.
+`expo-router` file routes:
+`/ (splash) → /welcome → /role-select → /signup-basic → /signup-tasker-profile → /(app)/post (seeker) | /(app)/board (tasker) → /job/[id], /chat/[id], /profile, /notifications`. Guard: session token null → redirect to `/welcome` (root layout effect).
 
 ---
 
@@ -149,8 +145,8 @@ jobs.MapPost("/", async (CreateJobDto dto, AppDbContext db, ClaimsPrincipal user
 
 ### 4.4 Database
 
-- **Neon Postgres only** (`UseNpgsql`, decided — no SQL Server anywhere): dev uses Neon `dev` branch, prod uses `prod` branch. Optional `postgres:16` in `deploy/compose.yml` for offline dev only.
-- **Migrations:** `dotnet ef migrations add Init` + `dotnet ef database update`. Concurrency via Postgres `xmin` (`uint Version` + `IsConcurrencyToken()`), never `rowversion`.
+- **Neon Postgres only** (`UseNpgsql`, decided): dev uses Neon `dev` branch, prod uses `prod` branch. Optional `postgres:16` in `deploy/compose.yml` for offline dev only.
+- **Migrations:** `dotnet ef migrations add Init` + `dotnet ef database update`. Concurrency via Postgres `xmin` (`uint Version` + `IsConcurrencyToken()`).
 - **Indexes:** `Jobs(OwnerId, Status, Category, CreatedAt)`, `Messages(ConversationId, CreatedAt)`, `Escrows(JobId)`.
 
 ### 4.5 Entity Summary (8 tables max)
@@ -217,24 +213,24 @@ All DTOs validated via `FluentValidation` + `ValidationFilter`. Responses `Typed
 ### 5.2 SignalR
 
 - **Hubs:** `ChatHub` (`JoinJobGroup(jobId)`, `SendMessage(jobId,text)`, `Typing(jobId,bool)`), `NotificationHub` (`OnJobMatched`, `OnEscrowReleased`, `OnNewMessage`).
-- **Flutter client:** `HubConnectionBuilder().withUrl("$baseUrl/hubs/chat", options=>options.accessTokenFactory=()=>storage.read("access_token")).build()` (`signalr_netcore`). Auto-reconnect, groups `Clients.Group(jobId)`.
+- **JS client:** `new HubConnectionBuilder().withUrl(`${baseUrl}/hubs/chat`, { accessTokenFactory: () => token }).build()` (`@microsoft/signalr`). Auto-reconnect, groups `Clients.Group(jobId)`.
 
 ---
 
 ## 6. Auth & Security
 
 - **Passwords:** `BCrypt` or `IPasswordHasher<User>` (cost 12). Store hash only.
-- **JWT:** HS256, `sub=jti=Guid, phone, role`, 15m expiry, `Issuer=yourdomain, Audience=flutter`, `SymmetricSecurityKey` 32+ bytes. `TokenValidationParameters.ValidateIssuer/Audience/Lifetime/IssuerSigningKey, ClockSkew=30s`.
+- **JWT:** HS256, `sub=jti=Guid, phone, role`, 15m expiry, `Issuer=yourdomain, Audience=gigood`, `SymmetricSecurityKey` 32+ bytes. `TokenValidationParameters.ValidateIssuer/Audience/Lifetime/IssuerSigningKey, ClockSkew=30s`.
 - **Refresh:** 64-char opaque `RandomNumberGenerator`, store `SHA256 hash`, 7d expiry, rotation: revoke old → issue new, reuse detection: if presented token already revoked/replaced → revoke entire family (steal).
-- **Flutter storage:** `accessToken` in memory + `flutter_secure_storage` ; `refreshToken` only in secure storage (Keystore/Keychain, never `shared_preferences`).
-- **Dio interceptor:** `QueuedInterceptorsWrapper` on 401 (not `/auth/refresh`) → `POST /auth/refresh` → update storage → `dio.fetch(original)` retry; on failure → `deleteAll + router.go('/login')`.
+- **Mobile storage:** `accessToken` in memory + `expo-secure-store`; `refreshToken` only in secure store (Keystore/Keychain, never `AsyncStorage`).
+- **Axios interceptor:** response interceptor on 401 (not `/auth/refresh`) → `POST /auth/refresh` → update secure store → retry the original request; on failure → clear tokens + `router.replace('/login')`.
 
 ---
 
 ## 7. Internationalization
 
-- `easy_localization` with `assets/translations/vi.json` fallback, `en.json` secondary. `MaterialApp(localizationsDelegates: context.localizationDelegates, supportedLocales: [Locale('vi'), Locale('en')], locale: Locale('vi'))`.
-- Keys: `auth.login`, `jobs.post`, `jobs.board`, `wallet.escrow`, `chat.placeholder`, `rating.submit`, etc. Translate auth + job templates first for grading check.
+- MVP ships `vi`-only hardcoded demo strings (preserve existing copy). No `en` pass and no i18n library for the 2-week build.
+- Full i18n (`i18next` / `expo-localization`) is deferred post-2w; keys can be introduced then without restructuring screens.
 
 ---
 
@@ -242,7 +238,7 @@ All DTOs validated via `FluentValidation` + `ValidationFilter`. Responses `Typed
 
 ### 8.1 Map
 
-- **Client:** `google_maps_flutter` (requires `GOOGLE_MAPS_API_KEY` in `android/app/src/main/AndroidManifest.xml` + `ios/Runner/AppDelegate`) or swap to `flutter_map` + OSM if key unavailable.
+- **Client:** demo visual map (the existing board grid/pin layout) with jobs positioned by **real `lat/lng`** — no map SDK, no API key.
 - **Data:** `Jobs.lat/lng double` (replaces `mapX/Y %`). Backend geospatial: `WHERE (Lat BETWEEN :lat±d) AND (Lng BETWEEN :lng±d)` plus `Haversine` ordering; add `PostGIS` later if needed.
 
 ### 8.2 Chat
@@ -280,61 +276,43 @@ Two-way 1-5 + comment, one per `Job` per direction, `CHECK (Rate BETWEEN 1 AND 5
 
 ## 9. DevOps, Config & Release
 
-- **Config:** `API_BASE_URL` via `--dart-define=API_BASE_URL=https://api.yourdomain` (dev `http://10.0.2.2:5000` for emulator, `http://localhost:5000` for iOS sim). Never hardcode.
-- **Hosting BE:** `Render free` for testing (sleeps when idle — cold start 30-60s; upgrade to Starter $7 before demo day if it hurts). Start `dotnet Api.dll` with `$PORT`. DB: `Neon` free Postgres (`dev` + `prod` branches, pooled connection string). No SQL Server anywhere.
+- **Config:** `EXPO_PUBLIC_API_BASE_URL` env (dev `http://10.0.2.2:5000` for emulator, `http://localhost:5000` for iOS sim). Never hardcode.
+- **Hosting BE:** `Render free` for testing (sleeps when idle — cold start 30-60s; upgrade to Starter $7 before demo day if it hurts). Start `dotnet Api.dll` with `$PORT`. DB: `Neon` free Postgres (`dev` + `prod` branches, pooled connection string).
 - **Hosting web:** `web/dist` as Render static site ($0) pointing at the API URL.
-- **CORS:** `AllowFlutterOrigin + AllowWebOrigin` + `AllowCredentials` for SignalR.
-- **Flutter Release:** `keytool -genkey -v -keystore upload-keystore.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`, `android/key.properties`, `android/app/build.gradle` signing, `flutter build apk --release --dart-define=API_BASE_URL=...` → `build/app/outputs/flutter-apk/app-release.apk`. Test `adb install`. Web demo = Vite `web/` (task 12), not `flutter build web`.
-- **CI (optional):** GitHub Actions: `dotnet build/test` + `flutter analyze/test` on PR.
+- **CORS:** `AllowExpoOrigin + AllowWebOrigin` + `AllowCredentials` for SignalR.
+- **Mobile Release:** EAS Build `preview` profile → APK (requires an expo.dev account); `npx eas build -p android --profile preview`. Inject the API URL through `EXPO_PUBLIC_API_BASE_URL` at build time. Web demo = Vite `web/` (task 12).
+- **CI (optional):** GitHub Actions: `dotnet build/test` + `tsc --noEmit` on PR.
 
 ---
 
-## 10. Testing (PRM393 Gate)
+## 10. Testing
 
-- **Unit (bloc_test + mocktail):**
-```dart
-blocTest<AuthBloc, AuthState>(
-  'login emits [Loading, Authenticated]',
-  build: () => AuthBloc(mockRepo),
-  act: (b) => b.add(LoginRequested(phone: '0901234567', password: '123456')),
-  expect: () => [AuthLoading(), isA<Authenticated>()],
-);
-```
-`formatVnd` → `NumberFormat('vi_VN')` unit test.
-
-- **Widget:**
-```dart
-testWidgets('JobCard renders', (t) async {
-  await t.pumpWidget(MaterialApp(home: JobCard(job: fakeJob)));
-  expect(find.text('Khơi thông thoát sàn'), findsOneWidget);
-});
-```
-Target 5-10 tests — AI generates in 30min; lecturer checks folder existence, not coverage.
-
-- **BE (optional):** `xUnit` for `JwtProvider` + `Escrow` concurrency, but Flutter tests satisfy PRM393 if time tight.
+- **Mobile:** Jest + React Native Testing Library. Exactly **1 smoke test** (task 10): render `JobCard` with a fake job and assert the title renders.
+- **BE (optional):** `xUnit` for `JwtProvider` + `Escrow` concurrency if time allows.
+- Lecturer/test gates dropped (EXE201 has no such grading requirement).
 
 ---
 
 ## 11. 2-Week Vibe Schedule (14 Days)
 
-| Day | Deliverable | PRM393 Artifact | EXE201 Artifact |
-|-----|-------------|-----------------|-----------------|
-| D1 | Scaffold: `dotnet new webapi` + `flutter create` + `AppDbContext` + migrations + `Dio + go_router + secure_storage + easy_localization` | DB/API skeleton, Swagger | — |
-| D2 | Auth: register/login/refresh/revoke + JWT + BCrypt + secure storage interceptor | Login screen, DB `Users/RefreshTokens` | — |
-| D3 | Jobs CRUD + Categories + Upload + `POST /api/jobs` | Product list/detail | BMC + Category meta |
-| D4 | Map `lat/lng` + Board list geospatial query | Map screen | **Outcome 1 draft:** MVP + 3 product levels + Financial plan |
-| D5 | Chat REST + SignalR `ChatHub` + Flutter hub service | Chat + State mgmt | — |
-| D6 | Notifications Hub + FCM stub + tray | Notifications screen | Channel setup FB/Insta/Tiktok |
-| D7 | Wallet/Escrow ledger tx + `xmin` concurrency + balance/transactions endpoints | Billing/Checkout (escrow) + Cart (job selection) | Revenue KPI |
-| D8 | Ratings (two-way) + `Review` + avg update | Rating | — |
-| D9 | Profile + RoleSwitch (single user dual Roles) + edit + avatar upload | Role mgmt | Staffing plan |
-| D10 | i18n `vi` + polish tokens (`orange/teal`, FontAwesome) + empty states | i18n | MKT content plan |
-| D11 | Tests: 4 unit + 2 widget + Swagger Scalar + seed | Tests gate | Feedback form prep |
-| D12 | Validation `FluentValidation`, error handling, pagination + web admin (task 12 parallel) | Validation | Feedback >=20 mock |
-| D13 | Deploy API to Render free + Neon prod + `flutter build apk --release` + `10.0.2.2`→prod URL + web static | Hosted URL + APK | Deploy web demo |
-| D14 | Demo script 15min + backup APK + recording + report outline | Demo + Report skeleton | Outcome 1 final PDF |
+| Day | Deliverable | EXE201 Artifact |
+|-----|-------------|-----------------|
+| D1 | Task 00 — import `origin/demo` → `app_mobile/`; scaffold `Api/` + `AppDbContext` + migrations | — |
+| D2 | Task 01 — Auth register/login/refresh/revoke + JWT + secure-store axios interceptor | — |
+| D3 | Task 02 — Jobs CRUD + Categories + Upload + `POST /api/jobs` | BMC + Category meta |
+| D4 | Task 03 — Map `lat/lng` + Board geospatial query | **Outcome 1 draft:** MVP + 3 product levels + Financial plan |
+| D5 | Task 04 — Chat REST + SignalR `ChatHub` + RN hub service | — |
+| D6 | Task 05 — Notifications Hub + local notifications tray | Channel setup FB/Insta/TikTok |
+| D7 | Task 06 — Wallet/Escrow ledger tx + `xmin` concurrency + balance/transactions endpoints | Revenue KPI |
+| D8 | Task 07 — Ratings (two-way) + `Review` + avg update | — |
+| D9 | Task 08 — Profile + RoleSwitch (single user dual roles) + edit + avatar upload | Staffing plan |
+| D10 | Task 09 — `vi` copy polish + theme tokens (`orange/teal`) + empty states | MKT content plan |
+| D11 | Task 10 — Jest/RTL smoke test + Swagger Scalar + seed | Feedback form prep |
+| D12 | Task 11 — Validation/error handling + pagination; deploy API to Render free + Neon prod (task 12 web admin parallel) | Feedback >=20 mock |
+| D13 | Task 11 — EAS Build `preview` APK + wire prod URL + `web/dist` static | Hosted URL + APK + Deploy web demo |
+| D14 | Demo script 15min + backup APK + recording + report outline | Outcome 1 final PDF |
 
-Buffer: if blocked, defer FCM (use foreground hub only) and Postgres PostGIS.
+Buffer: if blocked, defer remote push (foreground hub only) and PostGIS.
 
 ---
 
@@ -342,33 +320,31 @@ Buffer: if blocked, defer FCM (use foreground hub only) and Postgres PostGIS.
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Flutter↔.NET JWT mismatch | 401 loop | Use HS256 + `accessTokenFactory`, test `curl` first, log `TokenValidationParameters` |
+| RN↔.NET JWT mismatch | 401 loop | axios response interceptor + `accessTokenFactory`, test `curl` first, log `TokenValidationParameters` |
 | Escrow race (2 taskers accept same job) | Negative balance, double escrow | `xmin` + transaction + unique `Escrows(JobId)` + `Conflict 409` retry |
-| Hardcoded `localhost:5000` in APK | Demo fails on device | `--dart-define` + `10.0.2.2` emulator switch, never commit URL |
-| Clean Arch over-engineering | -2 days | Stay single project; inject `AppDbContext` directly |
+| Hardcoded URL baked into EAS build | Demo fails on device | `EXPO_PUBLIC_API_BASE_URL` env at build time + `10.0.2.2` emulator switch, never commit URL |
 | Marketplace cold-start (EXE201 orders) | No transaction bills | Sell `gói dịch vụ` where team = tasker; classmates as first customers; log every escrow as bill |
-| Scope creep (OTP, S3 day-1) | Miss 2w | Web admin stays display-only (task 12); OTP/S3 deferred; `verified=false` placeholder suffices |
+| Scope creep (real map, push, full i18n) | Miss 2w | Demo visual map; local notifications only; `vi` hardcoded; web admin stays display-only (task 12) |
 
 ---
 
-## 13. Decisions — Confirm with Team (blocking WBS)
+## 13. Decisions — All Decided
 
-1. **DB prod:** ~~Keep SQL Server everywhere or switch prod to Postgres Neon?~~ DECIDED: Neon Postgres only (dev+prod branches).
-2. **Map:** `google_maps_flutter` (needs API key, better) vs `flutter_map` OSM (free, no key)?
-3. **Upload:** `wwwroot/uploads` MVP acceptable or require S3/Cloudinary day-1?
-4. **State granularity:** `Cubit` for profile/filter + `Bloc` for chat/wallet — agreed?
-5. **EXE201 track:** Confirm `Công nghệ/Dịch vụ` (no inventory) vs `Vật lý` — tech = GiGood fits without stock.
-6. **Who owns BE vs FE vibe prompts:** Prefix `Act as senior .NET 8 + Flutter bloc. Generate minimal code, no extra abstraction, ask before adding package.` — share?
+1. **DB:** Neon Postgres only (dev+prod branches, `xmin` concurrency).
+2. **Map:** demo visual + real `lat/lng`, no SDK/key.
+3. **Upload:** `wwwroot/uploads` MVP (S3/Cloudinary deferred).
+4. **State:** React Query (server) + context (session/UI) — replaces reducer internals, keeps hook surface.
+5. **EXE201 track:** `Công nghệ/Dịch vụ` tech track (no inventory).
+6. **Release:** EAS Build `preview` profile → APK.
+
+No blocking items left.
 
 ---
 
 ## 14. Next Step
 
-If team approves this stack:
-- **WBS Phase:** L1 `Initiating` → L2 `Planning` → L3/L4 work packages with `Responsibility Assignment Matrix (RAM)` per FPT `PMG393` Ch.5 Pinto p.172/199 — pre-mapped to 2-week sprints + EXE201 outcomes.
 - **Repo bootstrap:** `Api/`, `app_mobile/`, `web/`, `docs/` with this doc as `docs/TECH_STACK_PLAN.md`.
+- Begin task 00 (import demo) per `docs/BACKLOG.md` + `docs/tasks/*`.
 
-> **Approval:** Reply `Approved` or comment on decisions 1-6. Changes will be versioned `v1.1`.
-
-*Generated: 2026-08-28. Authors: GiGood rebuild team.*
-*References: `GiGood/types/index.ts`, `GiGood/lib/GiGoodContext.tsx`, `GiGood/tailwind.config.js`, `GiGood/app/(app)/_layout.tsx`*
+*Generated: 2026-08-28. Updated for Expo pivot: 2026-09-13. Authors: GiGood rebuild team.*
+*References: `origin/demo` `types/index.ts`, `lib/GiGoodContext.tsx`, `tailwind.config.js`, `app/(app)/_layout.tsx`*

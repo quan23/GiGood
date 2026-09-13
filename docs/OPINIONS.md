@@ -4,6 +4,17 @@
 > Agents are personal gitignored (`.opencode/agents/*-opinion.md`), this synthesis is shareable.
 > Note: `--agent <subagent>` warns `subagent, not a primary agent. Falling back to default agent` — model override still applied (`> build · minimax-m3` etc.), prompt from agent file was NOT auto-loaded, so each run passed explicit read-only prompt. For full agent-prompt runs, use TUI `@mention`.
 
+## Pivot note (2026-09-13)
+
+Mobile pivoted to an **Expo (React Native) refactor** of `origin/demo`; PRM393 is out and the project is **EXE201-only**. The Flutter-specific recommendations below are **VOID** (kept as history):
+- DeepSeek "KEEP Flutter bloc/dio" keep-bloc item.
+- MiniMax "Bloc visibility" P0 gate items.
+- Qwen `flutter_map` / `FakeJobsRepo` / `get_it` items -> RN equivalents: keep the existing hook surface, demo-visual map (no SDK), seed/mock switch via `EXPO_PUBLIC_USE_MOCK`.
+
+Backend findings **P1-P10 still stand** (they are stack-agnostic .NET/Postgres fixes). Model for future runs: `opencode-go/deepseek-v4.1-flash`.
+
+---
+
 ## Commands used
 
 ```bash

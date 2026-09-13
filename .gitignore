@@ -22,6 +22,7 @@ _local/
 drafts/
 *.private.md
 .opencode/agents/*-opinion.md
+.opencode/agents/*-worker.md
 !.opencode/agents/.gitkeep
 
 # --- .NET ---
