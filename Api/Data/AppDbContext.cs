@@ -1,12 +1,15 @@
+using Api.Features.Auth;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    // TODO task 01-06: add DbSets as features land (keep one vertical slice per task).
-    // public DbSet<User> Users => Set<User>();                                  // task 01
-    // public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();          // task 01
+    // One vertical slice per task.
+    public DbSet<User> Users => Set<User>();                                  // task 01
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();          // task 01
+
+    // TODO task 02-06: add remaining DbSets as features land.
     // public DbSet<Job> Jobs => Set<Job>();                                      // task 02
     // public DbSet<JobImage> JobImages => Set<JobImage>();                       // task 02
     // public DbSet<JobApplication> JobApplications => Set<JobApplication>();     // task 02/06
@@ -29,6 +32,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         // Npgsql maps to the system `xmin` column, e.g.
         //   modelBuilder.Entity<Job>().Property(j => j.Version).IsRowVersion();
         //   modelBuilder.Entity<Wallet>().Property(w => w.Version).IsRowVersion();
-        // TODO task 01-06: entity configurations + indexes land with their features.
+        // TODO task 02-06: entity configurations + indexes land with their features.
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasIndex(u => u.Phone).IsUnique();
+            entity.Property(u => u.Skills).HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasIndex(t => t.TokenHash).IsUnique();
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

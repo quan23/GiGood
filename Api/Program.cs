@@ -1,5 +1,7 @@
 using System.Text;
 using Api.Data;
+using Api.Features.Auth;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -29,6 +31,9 @@ if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32
     // Dev-only fallback so /health + /swagger run before secrets land (task 01 owns real config).
     jwtKey = "gigood-dev-only-signing-key-32bytes!";
 }
+
+// JwtProvider shares the resolved key (same >=32-byte validation).
+builder.Configuration["Jwt:Key"] = jwtKey;
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -64,6 +69,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+
+// ---------------------------------------------------------------------------
+// Auth slice (task 01) — BCrypt hashing, JWT issuing, FluentValidation rules.
+// ---------------------------------------------------------------------------
+builder.Services.AddSingleton<PasswordHasher>();
+builder.Services.AddSingleton<JwtProvider>();
+builder.Services.AddSingleton<IValidator<RegisterRequest>, RegisterRequestValidator>();
+builder.Services.AddSingleton<IValidator<LoginRequest>, LoginRequestValidator>();
+builder.Services.AddSingleton<IValidator<TokenRequest>, TokenRequestValidator>();
 
 // ---------------------------------------------------------------------------
 // SignalR (in-box). Hubs are mapped in task 04/05.
@@ -118,6 +132,9 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+// Dev-only quick-login seed; never blocks startup when the DB is unreachable.
+await app.SeedDevAuthAsync();
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -154,6 +171,9 @@ meta.MapGet("/categories", () => TypedResults.Ok(new[]
 // Guard stub: proves the auth pipeline; real jobs slice lands in task 02.
 app.MapGet("/api/jobs", () => TypedResults.Ok(Array.Empty<object>()))
     .RequireAuthorization();
+
+// Task 01: /api/auth/* + /api/me.
+app.MapAuthEndpoints();
 
 // TODO task 04/05: app.MapHub<ChatHub>("/hubs/chat"); app.MapHub<NotificationHub>("/hubs/notifications");
 

@@ -1,0 +1,263 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Api.Data;
+using FluentValidation;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+
+namespace Api.Features.Auth;
+
+public static class AuthEndpoints
+{
+    private const string InvalidCredentials = "Số điện thoại hoặc mật khẩu không đúng.";
+    private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(7);
+
+    public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/auth");
+
+        group.MapPost("/register", RegisterAsync);
+        group.MapPost("/login", LoginAsync);
+        group.MapPost("/refresh", RefreshAsync);
+        group.MapPost("/revoke", RevokeAsync); // anonymous: the body carries the refresh token
+
+        app.MapGet("/api/me", GetMeAsync).RequireAuthorization();
+
+        return app;
+    }
+
+    private static async Task<Results<Created<AuthResponse>, ValidationProblem, BadRequest<ErrorResponse>, Conflict<ErrorResponse>>> RegisterAsync(
+        RegisterRequest request,
+        IValidator<RegisterRequest> validator,
+        AppDbContext db,
+        PasswordHasher hasher,
+        JwtProvider jwt,
+        CancellationToken ct)
+    {
+        var validation = await validator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+        {
+            return TypedResults.ValidationProblem(validation.ToDictionary());
+        }
+
+        if (request.Role is not ("seeker" or "tasker"))
+        {
+            return TypedResults.BadRequest(new ErrorResponse("Vai trò không hợp lệ."));
+        }
+
+        if (await db.Users.AnyAsync(u => u.Phone == request.Phone, ct))
+        {
+            return TypedResults.Conflict(new ErrorResponse("Số điện thoại đã được đăng ký."));
+        }
+
+        var user = new User
+        {
+            Phone = request.Phone,
+            PasswordHash = hasher.Hash(request.Password),
+            Name = request.Name,
+            CurrentRole = request.Role,
+            Location = request.Location,
+        };
+
+        if (request.TaskerProfile is { } profile)
+        {
+            user.Skills = JsonSerializer.Serialize(profile.Skills ?? []);
+            user.Bio = profile.Bio;
+            user.Availability = profile.Availability;
+            user.Vehicle = profile.Vehicle;
+        }
+
+        var (accessToken, expiresIn) = jwt.CreateAccessToken(user);
+        var (rawRefresh, refreshToken) = CreateRefreshToken(user.Id);
+
+        db.Users.Add(user);
+        db.RefreshTokens.Add(refreshToken);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Unique index on Phone — covers the race between the check above and the insert.
+            return TypedResults.Conflict(new ErrorResponse("Số điện thoại đã được đăng ký."));
+        }
+
+        return TypedResults.Created(
+            $"/api/users/{user.Id}",
+            new AuthResponse(ToDto(user), accessToken, rawRefresh, expiresIn));
+    }
+
+    private static async Task<Results<Ok<TokenPair>, ProblemHttpResult>> LoginAsync(
+        LoginRequest request,
+        IValidator<LoginRequest> validator,
+        AppDbContext db,
+        PasswordHasher hasher,
+        JwtProvider jwt,
+        CancellationToken ct)
+    {
+        var validation = await validator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidCredentials);
+        }
+
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Phone == request.Phone, ct);
+        if (user is null || !hasher.Verify(request.Password, user.PasswordHash))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidCredentials);
+        }
+
+        var (accessToken, expiresIn) = jwt.CreateAccessToken(user);
+        var (rawRefresh, refreshToken) = CreateRefreshToken(user.Id);
+
+        db.RefreshTokens.Add(refreshToken);
+        await db.SaveChangesAsync(ct);
+
+        return TypedResults.Ok(new TokenPair(accessToken, rawRefresh, expiresIn));
+    }
+
+    private static async Task<Results<Ok<TokenPair>, ValidationProblem, ProblemHttpResult>> RefreshAsync(
+        TokenRequest request,
+        IValidator<TokenRequest> validator,
+        AppDbContext db,
+        JwtProvider jwt,
+        CancellationToken ct)
+    {
+        var validation = await validator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+        {
+            return TypedResults.ValidationProblem(validation.ToDictionary());
+        }
+
+        var tokenHash = HashToken(request.RefreshToken);
+        var stored = await db.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
+        if (stored is null || stored.RevokedAt is not null || stored.ExpiresAt <= DateTime.UtcNow)
+        {
+            return InvalidSession();
+        }
+
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == stored.UserId, ct);
+        if (user is null)
+        {
+            return InvalidSession();
+        }
+
+        // Rotate-on-use: revoke the presented token and hand out a fresh pair.
+        var (accessToken, expiresIn) = jwt.CreateAccessToken(user);
+        var (rawRefresh, replacement) = CreateRefreshToken(user.Id);
+
+        stored.RevokedAt = DateTime.UtcNow;
+        stored.ReplacedByToken = replacement.TokenHash;
+        db.RefreshTokens.Add(replacement);
+        await db.SaveChangesAsync(ct);
+
+        return TypedResults.Ok(new TokenPair(accessToken, rawRefresh, expiresIn));
+    }
+
+    private static async Task<Results<NoContent, ValidationProblem>> RevokeAsync(
+        TokenRequest request,
+        IValidator<TokenRequest> validator,
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var validation = await validator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+        {
+            return TypedResults.ValidationProblem(validation.ToDictionary());
+        }
+
+        var tokenHash = HashToken(request.RefreshToken);
+        var stored = await db.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
+        if (stored is not null && stored.RevokedAt is null)
+        {
+            stored.RevokedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+        }
+
+        return TypedResults.NoContent(); // idempotent: unknown/already-revoked tokens are a no-op
+    }
+
+    private static async Task<Results<Ok<MeResponse>, UnauthorizedHttpResult>> GetMeAsync(
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var userId = GetUserId(principal);
+        if (userId is null)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == userId, ct);
+        if (user is null)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        return TypedResults.Ok(new MeResponse(ToDto(user), Wallet: null)); // wallet lands in task 06
+    }
+
+    private static ProblemHttpResult InvalidSession() =>
+        TypedResults.Problem(
+            statusCode: StatusCodes.Status401Unauthorized,
+            detail: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+
+    private static Guid? GetUserId(ClaimsPrincipal principal)
+    {
+        // Inbound claim mapping may rename `sub`; accept both shapes.
+        var raw = principal.FindFirstValue("sub") ?? principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(raw, out var id) ? id : null;
+    }
+
+    private static (string RawToken, RefreshToken Entity) CreateRefreshToken(Guid userId)
+    {
+        var raw = Base64UrlEncode(RandomNumberGenerator.GetBytes(64));
+        return (raw, new RefreshToken
+        {
+            UserId = userId,
+            TokenHash = HashToken(raw),
+            ExpiresAt = DateTime.UtcNow.Add(RefreshTokenLifetime),
+        });
+    }
+
+    // SHA256 of the raw token; the raw value is never stored or logged.
+    private static string HashToken(string rawToken) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
+
+    private static string Base64UrlEncode(byte[] bytes) =>
+        Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private static UserDto ToDto(User user) => new(
+        user.Id,
+        user.Phone,
+        user.Name,
+        user.AvatarUrl,
+        user.Location,
+        user.RatingAvg,
+        user.CurrentRole,
+        ToTaskerProfileDto(user),
+        user.CreatedAt);
+
+    private static TaskerProfileDto? ToTaskerProfileDto(User user)
+    {
+        if (user.Skills is null && user.Bio is null && user.Availability is null && user.Vehicle is null)
+        {
+            return null;
+        }
+
+        var skills = string.IsNullOrWhiteSpace(user.Skills)
+            ? new List<string>()
+            : JsonSerializer.Deserialize<List<string>>(user.Skills) ?? [];
+
+        return new TaskerProfileDto(
+            skills,
+            user.Bio ?? string.Empty,
+            user.Availability ?? string.Empty,
+            user.Vehicle ?? string.Empty,
+            user.Verified);
+    }
+}
