@@ -35,11 +35,13 @@ type Action =
       };
     }
   | { type: "QUICK_LOGIN"; payload: Role }
+  | { type: "SET_PROFILE"; payload: UserProfile }
+  | { type: "SET_AUTH_HYDRATED"; payload: boolean }
   | { type: "SIGN_OUT" }
   | { type: "SWITCH_ROLE"; payload: Role }
   | {
       type: "SET_TEMP_SIGNUP_INFO";
-      payload: { name: string; phone: string; location: string } | null;
+      payload: { name: string; phone: string; location: string; password: string } | null;
     }
   | { type: "MARK_NOTIF_READ"; payload: number }
   | {
@@ -194,6 +196,22 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
       return {
         ...state,
         auth: { ...state.auth, pendingBasicInfo: action.payload },
+      };
+
+    case "SET_PROFILE":
+      return {
+        ...state,
+        auth: {
+          ...state.auth,
+          profile: action.payload,
+          currentRole: action.payload.role,
+        },
+      };
+
+    case "SET_AUTH_HYDRATED":
+      return {
+        ...state,
+        auth: { ...state.auth, hydrated: action.payload },
       };
 
     case "MARK_NOTIF_READ": {

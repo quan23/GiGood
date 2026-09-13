@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, Image, TextInput, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
@@ -7,18 +7,26 @@ import { useState } from 'react'
 
 export default function LoginScreen() {
   const router = useRouter()
-  const { quickLogin } = useAuth()
+  const { quickLogin, login } = useAuth()
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
 
-  const handleLogin = () => {
-    quickLogin('seeker')
-    router.replace('/(app)')
+  const handleLogin = async () => {
+    try {
+      await login(phone, password)
+      router.replace('/(app)')
+    } catch {
+      Alert.alert('Đăng nhập thất bại', 'Số điện thoại hoặc mật khẩu không đúng.')
+    }
   }
 
-  const handleQuickLogin = (role: 'seeker' | 'tasker') => {
-    quickLogin(role)
-    router.replace('/(app)')
+  const handleQuickLogin = async (role: 'seeker' | 'tasker') => {
+    try {
+      await quickLogin(role)
+      router.replace('/(app)')
+    } catch {
+      Alert.alert('Đăng nhập thất bại', 'Không thể đăng nhập tài khoản mẫu. Vui lòng thử lại.')
+    }
   }
 
   return (

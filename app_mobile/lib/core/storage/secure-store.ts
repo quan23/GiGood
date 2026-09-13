@@ -1,14 +1,21 @@
 import * as SecureStore from 'expo-secure-store'
 
-const ACCESS_TOKEN_KEY = 'gigood.accessToken'
-const REFRESH_TOKEN_KEY = 'gigood.refreshToken'
+const ACCESS_TOKEN_KEY = 'access_token'
+const REFRESH_TOKEN_KEY = 'refresh_token'
 
-export async function getToken(): Promise<string | null> {
+export async function getAccessToken(): Promise<string | null> {
   return SecureStore.getItemAsync(ACCESS_TOKEN_KEY)
 }
 
-export async function setToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token)
+export async function getRefreshToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(REFRESH_TOKEN_KEY)
+}
+
+export async function setTokens(accessToken: string, refreshToken: string): Promise<void> {
+  await Promise.all([
+    SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken),
+    SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken),
+  ])
 }
 
 export async function clearTokens(): Promise<void> {

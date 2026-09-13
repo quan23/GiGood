@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
@@ -33,18 +33,22 @@ export default function SignupTaskerProfileScreen() {
     )
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selectedSkills.length === 0) return
-    const info = basicInfo || { name: '', phone: '', location: '' }
-    signUpTasker(info.name, info.phone, info.location, {
-      skills: selectedSkills,
-      bio: bio || 'Tasker mới gia nhập GiGood, sẵn sàng nhận việc trong khu vực.',
-      availability,
-      vehicle,
-      verified: false,
-    })
-    dispatch({ type: 'SET_TEMP_SIGNUP_INFO', payload: null })
-    router.replace('/(app)')
+    const info = basicInfo || { name: '', phone: '', location: '', password: '' }
+    try {
+      await signUpTasker(info.name, info.phone, info.password, info.location, {
+        skills: selectedSkills,
+        bio: bio || 'Tasker mới gia nhập GiGood, sẵn sàng nhận việc trong khu vực.',
+        availability,
+        vehicle,
+        verified: false,
+      })
+      dispatch({ type: 'SET_TEMP_SIGNUP_INFO', payload: null })
+      router.replace('/(app)')
+    } catch {
+      Alert.alert('Đăng ký thất bại', 'Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin.')
+    }
   }
 
   return (

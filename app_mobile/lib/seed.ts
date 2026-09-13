@@ -56,6 +56,7 @@ export function createInitialState(): GiGoodState {
       currentRole: 'seeker',
       pendingBasicInfo: null,
       pendingSignupRole: 'seeker',
+      hydrated: false,
     },
     ui: {
       activeSeekerSubTab: 'post',

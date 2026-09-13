@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Switch } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Switch, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
@@ -20,14 +20,18 @@ export default function SignupBasicScreen() {
   const isSeeker = role === 'seeker'
   const accentColor = isSeeker ? '#ea580c' : '#0f766e'
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name || !phone || !password || !location || !agreed) return
-    if (isSeeker) {
-      signUpSeeker(name, phone, location)
-      router.replace('/(app)')
-    } else {
-      dispatch({ type: 'SET_TEMP_SIGNUP_INFO', payload: { name, phone, location } })
-      router.push('/(auth)/signup-tasker-profile')
+    try {
+      if (isSeeker) {
+        await signUpSeeker(name, phone, password, location)
+        router.replace('/(app)')
+      } else {
+        dispatch({ type: 'SET_TEMP_SIGNUP_INFO', payload: { name, phone, location, password } })
+        router.push('/(auth)/signup-tasker-profile')
+      }
+    } catch {
+      Alert.alert('Đăng ký thất bại', 'Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin.')
     }
   }
 
