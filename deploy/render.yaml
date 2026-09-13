@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: gigood-api
+    env: docker
+    dockerfilePath: Api/Dockerfile
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:$PORT
+      - key: ConnectionStrings__Default
+        sync: false
+      - key: Jwt__Key
+        sync: false
+      - key: Jwt__Issuer
+        value: GiGood
+      - key: Jwt__Audience
+        value: GiGoodMobile
+
+  # Static site; web/ is created in task 12, so this fails until then (expected).
+  - type: web
+    name: gigood-web
+    env: static
+    buildCommand: cd web && npm ci && npm run build
+    staticPublishPath: web/dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
