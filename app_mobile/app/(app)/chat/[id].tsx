@@ -1,77 +1,196 @@
-import { useState } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ChatBubble } from "../../../components/ui/ChatBubble";
-import { useGiGood } from "../../../lib/GiGoodContext";
-import { useChat } from "../../../hooks/useChat";
+import { useEffect, useRef, useState } from 'react'
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native'
+import { FontAwesome } from '@expo/vector-icons'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { ChatBubble } from '../../../components/ui/ChatBubble'
+import { EmptyState } from '../../../components/shared/EmptyState'
+import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
+import { useChat, type ChatMessage } from '../../../hooks/useChat'
+import { useAuth } from '../../../hooks/useAuth'
+import { useUi } from '../../../hooks/useUi'
+import { getApiErrorMessage, resolveImageUrl } from '../../../lib/features/jobs/api'
 
 export default function ChatDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const jobId = parseInt(id ?? "0", 10);
-  const { state } = useGiGood();
-  const { sendChat } = useChat();
-  const role = state.auth.currentRole;
-  const job = state.data.jobs.find(j => j.id === jobId) || null;
-  const [text, setText] = useState("");
+  const { id, jobId: jobIdParam } = useLocalSearchParams<{ id?: string; jobId?: string }>()
+  const conversationId = typeof id === 'string' && id.length > 0 ? id : undefined
+  const router = useRouter()
+  const { currentRole } = useAuth()
+  const { showToast } = useUi()
+  const {
+    conversation,
+    messages,
+    loading,
+    error,
+    hasMore,
+    loadingMore,
+    loadMore,
+    sendMessage,
+    isSending,
+    typing,
+    notifyTyping,
+  } = useChat(conversationId, typeof jobIdParam === 'string' ? jobIdParam : undefined)
 
-  const handleSend = () => {
-    if (!text.trim() || !job) return;
-    sendChat(jobId, role, text.trim());
-    setText("");
-  };
+  const listRef = useRef<FlatList<ChatMessage>>(null)
+  const [text, setText] = useState('')
 
-  if (!job) {
+  const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null
+
+  // Auto-scroll 100ms after the tail changes; older pages (load more) keep the
+  // last id, so reading history does not yank the list back down.
+  useEffect(() => {
+    if (!lastMessageId) return
+    const timer = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
+    return () => clearTimeout(timer)
+  }, [lastMessageId])
+
+  const handleSend = async () => {
+    const body = text.trim()
+    if (!body || isSending) return
+    setText('')
+    notifyTyping(false)
+    try {
+      await sendMessage(body)
+    } catch (err) {
+      showToast(getApiErrorMessage(err, 'Không thể gửi tin nhắn.'), 'error')
+      setText(body)
+    }
+  }
+
+  const avatar = resolveImageUrl(conversation?.peerAvatar)
+  const accent = currentRole === 'seeker' ? 'orange' : 'teal'
+
+  if (!conversationId) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <Text className="text-gray-500">Không tìm thấy cuộc trò chuyện</Text>
+      <SafeAreaView className="flex-1 bg-stone-50">
+        <EmptyState icon="📭" title="Không tìm thấy cuộc trò chuyện" />
       </SafeAreaView>
-    );
+    )
   }
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gray-50"
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      className="flex-1 bg-stone-50"
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <View className="px-4 py-2 bg-white border-b border-gray-200">
-        <Text className="font-semibold text-gray-800">{job.title}</Text>
-        <Text className="text-xs text-gray-400">
-          {role === "seeker" ? job.taskerName : job.seekerName}
-        </Text>
+      <View className="px-3 py-3 border-b border-gray-200 flex-row items-center bg-white">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="w-8 h-8 rounded-full bg-stone-100 items-center justify-center"
+        >
+          <FontAwesome name="arrow-left" size={12} color="#6b7280" />
+        </TouchableOpacity>
+        {avatar ? (
+          <Image source={{ uri: avatar }} className="w-9 h-9 rounded-full border border-gray-200 ml-2.5" />
+        ) : (
+          <View className="w-9 h-9 rounded-full bg-orange-50 items-center justify-center ml-2.5">
+            <Text className="text-orange-500 font-extrabold text-xs">
+              {(conversation?.peerName || 'G').charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
+        <View className="flex-1 min-w-0 ml-2.5">
+          <Text className="font-bold text-xs text-gray-800" numberOfLines={1}>
+            {conversation?.peerName ?? 'Trò chuyện'}
+          </Text>
+          <Text className="text-[10px] text-gray-400" numberOfLines={1}>
+            {conversation?.jobTitle ?? ''}
+          </Text>
+        </View>
       </View>
 
-      <FlatList
-        data={job.chats}
-        keyExtractor={(_, i) => i.toString()}
-        contentContainerClassName="p-4 pb-2"
-        inverted={false}
-        renderItem={({ item }) => (
-          <ChatBubble message={item} isOwn={item.sender === role} />
-        )}
-        ListEmptyComponent={
-          <View className="flex-1 justify-center items-center pt-20">
-            <Text className="text-gray-400">Chưa có tin nhắn</Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <LoadingSpinner text="Đang tải tin nhắn..." />
+      ) : !loading && error && messages.length === 0 ? (
+        <EmptyState
+          icon="📭"
+          title="Không thể tải cuộc trò chuyện"
+          subtitle={getApiErrorMessage(error, 'Vui lòng thử lại sau.')}
+        />
+      ) : (
+        <FlatList
+          ref={listRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          className="flex-1 bg-stone-50"
+          contentContainerClassName="p-4 pb-2"
+          ListHeaderComponent={
+            hasMore ? (
+              <TouchableOpacity
+                onPress={() => void loadMore()}
+                disabled={loadingMore}
+                className="py-3 items-center"
+              >
+                {loadingMore ? (
+                  <ActivityIndicator size="small" color="#9ca3af" />
+                ) : (
+                  <Text className="text-xs text-gray-400">Tải tin nhắn cũ hơn</Text>
+                )}
+              </TouchableOpacity>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <ChatBubble
+              message={{ body: item.body, createdAt: item.createdAt }}
+              isOwn={item.isOwn}
+              accent={accent}
+            />
+          )}
+          ListEmptyComponent={
+            <EmptyState
+              icon="📭"
+              title="Chưa có tin nhắn"
+              subtitle="Gửi lời chào để bắt đầu trò chuyện."
+            />
+          }
+        />
+      )}
+
+      {typing && (
+        <View className="px-4 pb-1 bg-white">
+          <Text className="text-[11px] text-teal-600 italic">
+            {conversation?.peerName ?? 'Đối phương'} đang nhập...
+          </Text>
+        </View>
+      )}
 
       <View className="flex-row items-center bg-white border-t border-gray-200 px-3 py-2">
         <TextInput
           value={text}
-          onChangeText={setText}
+          onChangeText={(value) => {
+            setText(value)
+            notifyTyping(value.trim().length > 0)
+          }}
           placeholder="Nhập tin nhắn..."
-          className="flex-1 bg-gray-100 rounded-full px-4 py-2 mr-2 text-gray-800"
+          placeholderTextColor="#9ca3af"
+          className="flex-1 bg-gray-100 rounded-full px-4 py-2 mr-2 text-gray-800 text-xs"
+          multiline
         />
         <TouchableOpacity
           onPress={handleSend}
-          disabled={!text.trim()}
-          className="bg-teal-600 rounded-full w-10 h-10 items-center justify-center"
+          disabled={!text.trim() || isSending}
+          className={`rounded-full w-10 h-10 items-center justify-center ${
+            accent === 'orange' ? 'bg-orange-500' : 'bg-teal-600'
+          } ${!text.trim() || isSending ? 'opacity-60' : ''}`}
         >
-          <Text className="text-white text-lg">➤</Text>
+          {isSending ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <FontAwesome name="paper-plane" size={12} color="white" />
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
-  );
+  )
 }

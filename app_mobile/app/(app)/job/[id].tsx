@@ -13,6 +13,7 @@ import { FontAwesome } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useJob, useJobs } from '../../../hooks/useJobs'
+import { useChat } from '../../../hooks/useChat'
 import { useAuth } from '../../../hooks/useAuth'
 import { useUi } from '../../../hooks/useUi'
 import { formatVnd } from '../../../lib/format'
@@ -36,6 +37,7 @@ export default function JobDetailScreen() {
   const { showToast } = useUi()
   const { job, loading } = useJob(jobId)
   const { updateJob, deleteJob, isUpdating, isDeleting } = useJobs()
+  const { openConversation, isOpening } = useChat()
 
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState('')
@@ -97,6 +99,19 @@ export default function JobDetailScreen() {
       router.back()
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Không thể xoá công việc.'), 'error')
+    }
+  }
+
+  const handleOpenChat = async () => {
+    if (!job || isOpening) return
+    try {
+      const conversationId = await openConversation(job.id)
+      router.push({
+        pathname: '/(app)/chat/[id]',
+        params: { id: conversationId, jobId: job.id },
+      })
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Không thể mở cuộc trò chuyện.'), 'error')
     }
   }
 
@@ -278,6 +293,18 @@ export default function JobDetailScreen() {
                 <Text className="text-[10px] font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">Bạn</Text>
               )}
             </View>
+
+            <TouchableOpacity onPress={handleOpenChat} disabled={isOpening}
+              className={`bg-teal-600 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isOpening ? 'opacity-60' : ''}`}>
+              {isOpening ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <FontAwesome name="comments" size={14} color="white" />
+                  <Text className="text-white text-sm font-bold">Nhắn tin</Text>
+                </>
+              )}
+            </TouchableOpacity>
 
             {isOwner && (
               <View className="flex-row gap-3">

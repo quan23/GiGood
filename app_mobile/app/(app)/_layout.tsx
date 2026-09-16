@@ -1,11 +1,12 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { Redirect, Stack, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useWallet } from "../../hooks/useWallet";
+import { connectChatHub } from "../../lib/features/chat/hub";
 import { formatVnd } from "../../lib/format";
 
 export default function AppLayout() {
@@ -14,6 +15,12 @@ export default function AppLayout() {
   const { notifications, clearNotifs, hasUnread } = useNotifications();
   const [notifOpen, setNotifOpen] = useState(false);
   const router = useRouter();
+
+  // Foreground-only realtime: connect once the session is hydrated. Best effort,
+  // never blocks the shell if the hub is unreachable.
+  useEffect(() => {
+    if (profile) void connectChatHub();
+  }, [profile]);
 
   if (!profile) {
     return <Redirect href="/(auth)" />;
