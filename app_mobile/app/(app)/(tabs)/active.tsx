@@ -17,6 +17,7 @@ import { useUi } from '../../../hooks/useUi'
 import { formatVnd } from '../../../lib/format'
 import { CATEGORY_META } from '../../../lib/categories'
 import { getApiErrorMessage } from '../../../lib/features/jobs/api'
+import { RatingSheet } from '../../../lib/features/ratings/components/RatingSheet'
 import type { JobModel } from '../../../lib/features/jobs/types'
 
 export default function ActiveScreen() {
@@ -26,6 +27,8 @@ export default function ActiveScreen() {
   const { showToast } = useUi()
   const router = useRouter()
   const [reportingId, setReportingId] = useState<string | null>(null)
+  // Task 07: job whose "Báo hoàn thành" just succeeded -> open the rating sheet.
+  const [ratingJob, setRatingJob] = useState<JobModel | null>(null)
 
   // `mine=true` also returns the caller's own posted jobs; this tab is the
   // accepted-tasker list, so keep only jobs owned by someone else.
@@ -40,6 +43,9 @@ export default function ActiveScreen() {
     try {
       await reportJob(job.id)
       showToast('Đã báo hoàn thành! Đang chờ khách xác nhận và giải ngân.', 'success')
+      // Task 07: tasker rates the seeker. The API only accepts reviews once the
+      // job is Done, so a too-early submit shows its 400 message in the sheet.
+      setRatingJob(job)
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Không thể báo hoàn thành.'), 'error')
     } finally {
@@ -122,6 +128,14 @@ export default function ActiveScreen() {
           )
         })
       )}
+
+      <RatingSheet
+        visible={!!ratingJob}
+        jobId={ratingJob?.id ?? ''}
+        revieweeName={ratingJob?.owner.name ?? 'Khách'}
+        onClose={() => setRatingJob(null)}
+        onSubmitted={() => setRatingJob(null)}
+      />
     </ScrollView>
   )
 }

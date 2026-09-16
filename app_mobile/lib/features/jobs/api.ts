@@ -93,6 +93,8 @@ export function resolveImageUrl(url?: string | null): string | null {
 type ApiErrorBody = {
   detail?: string
   title?: string
+  /** `ErrorResponse` from `Api.Features.Auth.Dtos` serializes as `{message}`. */
+  message?: string
   errors?: Record<string, string[]>
 }
 
@@ -105,6 +107,7 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
     if (first?.[0]) return first[0]
   }
   if (data?.detail) return data.detail
+  if (data?.message) return data.message
   if (error instanceof Error && error.message) return error.message
   return fallback
 }

@@ -4,12 +4,14 @@ import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../hooks/useAuth";
 import { useWallet } from "../../hooks/useWallet";
+import { useUserRating } from "../../hooks/useRatings";
 import { CATEGORY_META } from "../../lib/categories";
 import { formatVnd } from "../../lib/format";
 
 export default function ProfileScreen() {
   const { profile, currentRole, signOut } = useAuth();
   const { balance, escrowHeld } = useWallet();
+  const { rating } = useUserRating(profile?.id);
   const router = useRouter();
 
   if (!profile) {
@@ -56,7 +58,10 @@ export default function ProfileScreen() {
               {isSeeker ? "Người Thuê (Seeker)" : "Người Nhận Việc (Tasker)"}
             </Text>
             <Text className="text-[11px] text-amber-500 font-bold mt-0.5">
-              <FontAwesome name="star" size={11} /> Thành viên Đồng
+              <FontAwesome name="star" size={11} />{" "}
+              {rating && rating.count > 0
+                ? `${rating.avg.toFixed(1)} · ${rating.count} việc`
+                : "Thành viên Đồng"}
             </Text>
           </View>
         </View>

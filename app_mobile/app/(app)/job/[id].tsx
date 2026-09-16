@@ -22,6 +22,7 @@ import { CATEGORY_META } from '../../../lib/categories'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { EmptyState } from '../../../components/shared/EmptyState'
 import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
+import { RatingSheet } from '../../../lib/features/ratings/components/RatingSheet'
 import { getApiErrorMessage, resolveImageUrl } from '../../../lib/features/jobs/api'
 import type { Category } from '../../../types'
 
@@ -62,6 +63,8 @@ export default function JobDetailScreen() {
   const [category, setCategory] = useState<Category>('repair')
   const [price, setPrice] = useState('')
   const [location, setLocation] = useState('')
+  // Task 07: job whose release just succeeded -> open the rating sheet.
+  const [ratingJobId, setRatingJobId] = useState<string | null>(null)
 
   const isOwner = !!job && !!profile && job.owner.id === profile.id
   const isOpen = job?.status === 'Open'
@@ -196,6 +199,8 @@ export default function JobDetailScreen() {
     try {
       await releaseEscrow(job.id)
       showToast('Đã giải ngân cho người nhận việc.', 'success')
+      // Task 07: offer the seeker a review of the tasker right after release.
+      setRatingJobId(job.id)
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Không thể giải ngân.'), 'error')
     }
@@ -538,6 +543,14 @@ export default function JobDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      <RatingSheet
+        visible={!!ratingJobId}
+        jobId={ratingJobId ?? ''}
+        revieweeName="Người nhận việc"
+        onClose={() => setRatingJobId(null)}
+        onSubmitted={() => setRatingJobId(null)}
+      />
     </SafeAreaView>
   )
 }

@@ -14,6 +14,8 @@ import { useEscrows } from '../../../hooks/useWallet'
 import { useUi } from '../../../hooks/useUi'
 import { formatVnd } from '../../../lib/format'
 import { getApiErrorMessage } from '../../../lib/features/jobs/api'
+import { JobRatingBlock } from '../../../lib/features/ratings/components/JobRatingBlock'
+import { RatingSheet } from '../../../lib/features/ratings/components/RatingSheet'
 import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
 import { EmptyState } from '../../../components/shared/EmptyState'
 import type { JobModel } from '../../../lib/features/jobs/types'
@@ -31,6 +33,8 @@ export default function HistoryScreen() {
   const { escrows, refetch: refetchEscrows } = useEscrows()
   const { showToast } = useUi()
   const [releasingId, setReleasingId] = useState<string | null>(null)
+  // Job being rated (just released as owner, or a done job the user can review).
+  const [ratingJob, setRatingJob] = useState<JobModel | null>(null)
 
   const escrowByJob = useMemo(() => {
     const map = new Map<string, (typeof escrows)[number]>()
@@ -63,6 +67,8 @@ export default function HistoryScreen() {
     try {
       await releaseEscrow(job.id)
       showToast('Đã giải ngân cho người nhận việc.', 'success')
+      // Task 07: offer the seeker a review of the tasker right after release.
+      setRatingJob(job)
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Không thể giải ngân.'), 'error')
     } finally {
@@ -162,10 +168,25 @@ export default function HistoryScreen() {
                   {formatVnd(escrow?.amount ?? job.price)}
                 </Text>
               </View>
+              <JobRatingBlock
+                jobId={job.id}
+                canRate={isOwner || isPayee}
+                onRate={() => setRatingJob(job)}
+              />
             </View>
           )
         })
       )}
+
+      <RatingSheet
+        visible={!!ratingJob}
+        jobId={ratingJob?.id ?? ''}
+        revieweeName={
+          ratingJob && ratingJob.owner.id !== profile?.id ? ratingJob.owner.name : 'Người nhận việc'
+        }
+        onClose={() => setRatingJob(null)}
+        onSubmitted={() => setRatingJob(null)}
+      />
     </ScrollView>
   )
 }
