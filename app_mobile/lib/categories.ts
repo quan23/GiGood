@@ -18,6 +18,6 @@ export const AVAILABILITY_LABEL: Record<Availability, string> = {
 export const VEHICLE_LABEL: Record<Vehicle, string> = {
   motorbike: 'Xe máy',
   car: 'Ô tô',
-  bike: 'Xe đạp',
+  bicycle: 'Xe đạp',
   none: 'Đi bộ / không có xe',
 }

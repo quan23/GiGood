@@ -1,30 +1,156 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FormField } from "../../components/ui/FormField";
+import { ModalSheet } from "../../components/ui/ModalSheet";
 import { useAuth } from "../../hooks/useAuth";
-import { useWallet } from "../../hooks/useWallet";
 import { useUserRating } from "../../hooks/useRatings";
-import { CATEGORY_META } from "../../lib/categories";
+import { useUi } from "../../hooks/useUi";
+import { useWallet } from "../../hooks/useWallet";
+import { AVAILABILITY_LABEL, CATEGORY_META, VEHICLE_LABEL } from "../../lib/categories";
+import { getApiErrorMessage } from "../../lib/features/jobs/api";
+import { useProfile } from "../../lib/features/profile/hooks/useProfile";
+import type { ProfileUpdate } from "../../lib/features/profile/types";
 import { formatVnd } from "../../lib/format";
+import type { Availability, Category, Vehicle } from "../../types";
+
+type PickerKind = "availability" | "vehicle";
+
+const sameSkills = (a: Category[], b: Category[]) => {
+  if (a.length !== b.length) return false;
+  const selected = new Set(b);
+  return a.every((skill) => selected.has(skill));
+};
 
 export default function ProfileScreen() {
-  const { profile, currentRole, signOut } = useAuth();
+  const { profile: authProfile, signOut } = useAuth();
   const { balance, escrowHeld } = useWallet();
-  const { rating } = useUserRating(profile?.id);
+  const { rating } = useUserRating(authProfile?.id);
+  const {
+    profile: loadedProfile,
+    updateProfile,
+    uploadAvatar,
+    isSaving,
+    isUploadingAvatar,
+  } = useProfile();
+  const { showToast } = useUi();
   const router = useRouter();
 
-  if (!profile) {
+  const p = loadedProfile ?? authProfile;
+
+  const [name, setName] = useState(p?.name ?? "");
+  const [location, setLocation] = useState(p?.location ?? "");
+  const [bio, setBio] = useState(p?.taskerProfile?.bio ?? "");
+  const [skills, setSkills] = useState<Category[]>(p?.taskerProfile?.skills ?? []);
+  const [availability, setAvailability] = useState<Availability | null>(
+    p?.taskerProfile?.availability || null,
+  );
+  const [vehicle, setVehicle] = useState<Vehicle | null>(
+    p?.taskerProfile?.vehicle || null,
+  );
+  const [picker, setPicker] = useState<PickerKind | null>(null);
+
+  if (!p) {
     return null;
   }
 
-  const isSeeker = currentRole === "seeker";
-  const p = profile;
+  const isSeeker = p.role === "seeker";
   const tp = p.taskerProfile;
+  const accent = isSeeker ? "#ea580c" : "#0f766e";
 
-  const handleLogout = () => {
-    signOut();
+  const toggleSkill = (skill: Category) => {
+    setSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill],
+    );
   };
+
+  const pickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showToast("Cần quyền truy cập thư viện ảnh để đổi ảnh đại diện.", "error");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    try {
+      await uploadAvatar(result.assets[0].uri);
+      showToast("Đã cập nhật ảnh đại diện.", "success");
+    } catch (error) {
+      showToast(
+        getApiErrorMessage(error, "Không thể tải ảnh lên. Vui lòng thử lại."),
+        "error",
+      );
+    }
+  };
+
+  const handleSave = async () => {
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      showToast("Tên phải có ít nhất 2 ký tự.", "error");
+      return;
+    }
+
+    const body: ProfileUpdate = {};
+    if (trimmedName !== p.name) body.name = trimmedName;
+
+    const trimmedLocation = location.trim();
+    if (trimmedLocation !== p.location) body.location = trimmedLocation;
+
+    const trimmedBio = bio.trim();
+    if (tp) {
+      if (trimmedBio !== tp.bio) body.bio = trimmedBio;
+      if (!sameSkills(skills, tp.skills)) body.skills = skills;
+      if (availability && availability !== tp.availability)
+        body.availability = availability;
+      if (vehicle && vehicle !== tp.vehicle) body.vehicle = vehicle;
+    } else {
+      if (trimmedBio) body.bio = trimmedBio;
+      if (skills.length > 0) body.skills = skills;
+      if (availability) body.availability = availability;
+      if (vehicle) body.vehicle = vehicle;
+    }
+
+    if (Object.keys(body).length === 0) {
+      showToast("Chưa có thay đổi nào để lưu.", "info");
+      return;
+    }
+
+    try {
+      const next = await updateProfile(body);
+      setName(next.name);
+      setLocation(next.location);
+      setBio(next.taskerProfile?.bio ?? "");
+      setSkills(next.taskerProfile?.skills ?? []);
+      setAvailability(next.taskerProfile?.availability || null);
+      setVehicle(next.taskerProfile?.vehicle || null);
+      showToast("Đã lưu hồ sơ.", "success");
+    } catch (error) {
+      showToast(
+        getApiErrorMessage(error, "Không thể lưu hồ sơ. Vui lòng thử lại."),
+        "error",
+      );
+    }
+  };
+
+  const skillEntries = Object.entries(CATEGORY_META) as [
+    Category,
+    { label: string; icon: string },
+  ][];
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -40,30 +166,54 @@ export default function ProfileScreen() {
 
       <ScrollView
         className="flex-1 px-5 py-6"
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-row items-center space-x-4 mb-5">
-          <Image
-            source={{ uri: p.avatar }}
-            className="w-16 h-16 rounded-2xl border-2 border-orange-500"
-          />
-          <View>
-            <Text className="font-extrabold text-lg text-gray-800">
-              {p.name}
-            </Text>
-            <Text
-              className="text-xs font-bold"
-              style={{ color: isSeeker ? '#ea580c' : '#0f766e' }}
+        {/* Avatar + identity */}
+        <View className="items-center mb-5">
+          <TouchableOpacity
+            onPress={pickAvatar}
+            disabled={isUploadingAvatar}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={{ uri: p.avatar }}
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                borderWidth: 2,
+                borderColor: accent,
+              }}
+              contentFit="cover"
+            />
+            <View
+              className={`absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full border-2 border-white items-center justify-center ${
+                isSeeker ? "bg-orange-500" : "bg-teal-600"
+              }`}
             >
-              {isSeeker ? "Người Thuê (Seeker)" : "Người Nhận Việc (Tasker)"}
-            </Text>
-            <Text className="text-[11px] text-amber-500 font-bold mt-0.5">
-              <FontAwesome name="star" size={11} />{" "}
-              {rating && rating.count > 0
-                ? `${rating.avg.toFixed(1)} · ${rating.count} việc`
-                : "Thành viên Đồng"}
-            </Text>
-          </View>
+              {isUploadingAvatar ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <FontAwesome name="camera" size={10} color="#ffffff" />
+              )}
+            </View>
+          </TouchableOpacity>
+          <Text className="font-extrabold text-lg text-gray-800 mt-2">
+            {p.name}
+          </Text>
+          <Text className="text-xs font-bold" style={{ color: accent }}>
+            {isSeeker ? "Người Thuê (Seeker)" : "Người Nhận Việc (Tasker)"}
+          </Text>
+          <Text className="text-[11px] text-amber-500 font-bold mt-0.5">
+            <FontAwesome name="star" size={11} />{" "}
+            {rating && rating.count > 0
+              ? `${rating.avg.toFixed(1)} · ${rating.count} việc`
+              : "Thành viên Đồng"}
+          </Text>
+          <Text className="text-[10px] text-gray-400 mt-1">
+            Chạm vào ảnh để thay đổi
+          </Text>
         </View>
 
         {/* Wallet stats */}
@@ -82,83 +232,228 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {!isSeeker && tp && (
-          <View className="space-y-3 mb-5">
-            <View className="bg-white border border-gray-200 rounded-2xl p-4 space-y-2.5">
-              <Text className="text-xs font-bold text-gray-700">
-                Chân dung năng lực
-              </Text>
-              <View className="flex-row flex-wrap gap-1.5">
-                {tp.skills.map((s) => {
-                  const meta = CATEGORY_META[s];
-                  return (
-                    <Text
-                      key={s}
-                      className="text-[10px] font-bold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full overflow-hidden"
-                    >
-                      <FontAwesome
-                        name={
-                          (meta?.icon ||
-                            "wrench") as keyof typeof FontAwesome.glyphMap
-                        }
-                        size={10}
-                      />{" "}
-                      {meta?.label}
-                    </Text>
-                  );
-                })}
-              </View>
-              {tp.bio ? (
-                <Text className="text-xs text-gray-500 leading-relaxed">
-                  {tp.bio}
-                </Text>
-              ) : null}
-              <View className="flex-row gap-2 text-[11px] text-gray-500">
-                <Text className="flex-1">
-                  <FontAwesome name="clock-o" size={10} color="#9ca3af" />{" "}
-                  {tp.availability}
-                </Text>
-                <Text className="flex-1">
-                  <FontAwesome name="motorcycle" size={10} color="#9ca3af" />{" "}
-                  {tp.vehicle}
-                </Text>
-              </View>
-            </View>
-            <View className="bg-stone-50 border border-gray-200 rounded-2xl p-3.5 flex-row items-center justify-between">
-              <View className="flex-row items-center space-x-2.5">
-                <FontAwesome name="id-card" size={14} color="#9ca3af" />
-                <Text className="text-xs font-bold text-gray-700">
-                  Xác thực danh tính
-                </Text>
-              </View>
-              <Text className="text-[10px] font-bold text-amber-500">
-                Chưa xác thực
-              </Text>
-            </View>
-          </View>
-        )}
-
-        <View className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100 mb-5">
-          <View className="px-4 py-3.5 flex-row items-center justify-between">
-            <Text className="text-xs font-bold text-gray-700">
-              Số điện thoại
-            </Text>
+        {/* Personal info */}
+        <View className="bg-white border border-gray-200 rounded-2xl p-4 mb-5 space-y-3">
+          <Text className="text-xs font-bold text-gray-700">Thông tin cá nhân</Text>
+          <FormField
+            label="Họ và tên"
+            required
+            value={name}
+            onChangeText={setName}
+            placeholder="Tên của bạn"
+          />
+          <FormField
+            label="Khu vực"
+            value={location}
+            onChangeText={setLocation}
+            placeholder="VD: Quận 1, TP. Hồ Chí Minh"
+          />
+          <View className="px-4 py-3.5 rounded-2xl bg-stone-50 border border-gray-200 flex-row items-center justify-between">
+            <Text className="text-xs font-bold text-gray-700">Số điện thoại</Text>
             <Text className="text-xs text-gray-500">{p.phone || "—"}</Text>
-          </View>
-          <View className="px-4 py-3.5 flex-row items-center justify-between">
-            <Text className="text-xs font-bold text-gray-700">Khu vực</Text>
-            <Text className="text-xs text-gray-500">{p.location || "—"}</Text>
           </View>
         </View>
 
+        {/* Tasker profile */}
+        <View className="bg-white border border-gray-200 rounded-2xl p-4 mb-5 space-y-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xs font-bold text-gray-700">Hồ sơ Tasker</Text>
+            <Text
+              className={`text-[10px] font-bold ${
+                tp?.verified ? "text-teal-600" : "text-amber-500"
+              }`}
+            >
+              {tp?.verified ? "Đã xác thực" : "Chưa xác thực"}
+            </Text>
+          </View>
+
+          <View className="space-y-2">
+            <Text className="text-xs font-bold text-gray-700">Lĩnh vực mạnh</Text>
+            <View className="flex-row flex-wrap">
+              {skillEntries.map(([key, meta]) => {
+                const active = skills.includes(key);
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => toggleSkill(key)}
+                    className={`flex-row items-center space-x-1.5 px-3 py-2 rounded-xl border-2 mr-2 mb-2 ${
+                      active
+                        ? "border-teal-600 bg-teal-50"
+                        : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    <FontAwesome
+                      name={meta.icon as keyof typeof FontAwesome.glyphMap}
+                      size={11}
+                      color={active ? "#0f766e" : "#9ca3af"}
+                    />
+                    <Text
+                      className={`text-[11px] font-bold ${
+                        active ? "text-teal-600" : "text-gray-600"
+                      }`}
+                    >
+                      {meta.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <FormField
+            label="Giới thiệu ngắn"
+            value={bio}
+            onChangeText={setBio}
+            placeholder="VD: Mình có 2 năm kinh nghiệm sửa chữa điện nước..."
+            multiline
+            numberOfLines={3}
+            style={{ minHeight: 80, textAlignVertical: "top" }}
+          />
+
+          <View className="space-y-1.5">
+            <Text className="text-xs font-bold text-gray-700">Thời gian rảnh</Text>
+            <TouchableOpacity
+              onPress={() => setPicker("availability")}
+              className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 flex-row items-center justify-between bg-white"
+            >
+              <Text
+                className={`text-sm ${availability ? "text-gray-700" : "text-gray-400"}`}
+              >
+                {availability
+                  ? AVAILABILITY_LABEL[availability]
+                  : "Chọn thời gian rảnh"}
+              </Text>
+              <FontAwesome name="chevron-down" size={12} color="#9ca3af" />
+            </TouchableOpacity>
+          </View>
+
+          <View className="space-y-1.5">
+            <Text className="text-xs font-bold text-gray-700">Phương tiện</Text>
+            <TouchableOpacity
+              onPress={() => setPicker("vehicle")}
+              className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 flex-row items-center justify-between bg-white"
+            >
+              <Text
+                className={`text-sm ${vehicle ? "text-gray-700" : "text-gray-400"}`}
+              >
+                {vehicle ? VEHICLE_LABEL[vehicle] : "Chọn phương tiện di chuyển"}
+              </Text>
+              <FontAwesome name="chevron-down" size={12} color="#9ca3af" />
+            </TouchableOpacity>
+          </View>
+
+          {!tp ? (
+            <Text className="text-[10px] text-gray-400 leading-relaxed">
+              Hoàn thiện hồ sơ Tasker để có thể chuyển sang vai trò Người Nhận việc.
+            </Text>
+          ) : null}
+        </View>
+
+        {/* Save */}
         <TouchableOpacity
-          onPress={handleLogout}
+          onPress={handleSave}
+          disabled={isSaving}
+          className={`w-full py-3.5 rounded-2xl flex-row items-center justify-center space-x-2 mb-5 ${
+            isSaving ? "opacity-70" : ""
+          } ${isSeeker ? "bg-orange-500" : "bg-teal-600"}`}
+        >
+          {isSaving ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <>
+              <FontAwesome name="save" size={12} color="#ffffff" />
+              <Text className="text-white text-sm font-bold">Lưu thay đổi</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* Identity verification */}
+        <View className="bg-stone-50 border border-gray-200 rounded-2xl p-3.5 flex-row items-center justify-between mb-5">
+          <View className="flex-row items-center space-x-2.5">
+            <FontAwesome name="id-card" size={14} color="#9ca3af" />
+            <Text className="text-xs font-bold text-gray-700">
+              Xác thực danh tính
+            </Text>
+          </View>
+          <Text className="text-[10px] font-bold text-amber-500">
+            Chưa xác thực
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={() => void signOut()}
           className="w-full bg-red-50 py-3.5 rounded-2xl flex-row items-center justify-center space-x-2"
         >
           <FontAwesome name="sign-out" size={12} color="#ef4444" />
           <Text className="text-red-500 text-sm font-bold">Đăng xuất</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <ModalSheet
+        visible={picker === "availability"}
+        onClose={() => setPicker(null)}
+      >
+        <Text className="text-sm font-extrabold text-gray-800">
+          Thời gian rảnh
+        </Text>
+        {(Object.entries(AVAILABILITY_LABEL) as [Availability, string][]).map(
+          ([key, label]) => (
+            <TouchableOpacity
+              key={key}
+              onPress={() => {
+                setAvailability(key);
+                setPicker(null);
+              }}
+              className={`px-4 py-3 rounded-xl border ${
+                availability === key
+                  ? "border-teal-500 bg-teal-50"
+                  : "border-gray-200"
+              }`}
+            >
+              <Text
+                className={`text-sm ${
+                  availability === key
+                    ? "text-teal-600 font-bold"
+                    : "text-gray-700"
+                }`}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ),
+        )}
+      </ModalSheet>
+
+      <ModalSheet
+        visible={picker === "vehicle"}
+        onClose={() => setPicker(null)}
+      >
+        <Text className="text-sm font-extrabold text-gray-800">
+          Phương tiện di chuyển
+        </Text>
+        {(Object.entries(VEHICLE_LABEL) as [Vehicle, string][]).map(
+          ([key, label]) => (
+            <TouchableOpacity
+              key={key}
+              onPress={() => {
+                setVehicle(key);
+                setPicker(null);
+              }}
+              className={`px-4 py-3 rounded-xl border ${
+                vehicle === key ? "border-teal-500 bg-teal-50" : "border-gray-200"
+              }`}
+            >
+              <Text
+                className={`text-sm ${
+                  vehicle === key ? "text-teal-600 font-bold" : "text-gray-700"
+                }`}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ),
+        )}
+      </ModalSheet>
     </SafeAreaView>
   );
 }

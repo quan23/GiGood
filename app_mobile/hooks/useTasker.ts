@@ -11,5 +11,5 @@ export function useTasker() {
   const totalEarnings = useMemo(() => earningsList.reduce((sum, j) => sum + j.budget, 0), [earningsList])
   const chatJobs = useMemo(() => jobs.filter(j => j.status === 'assigned' || j.status === 'completed'), [jobs])
 
-  return { availableJobs, assignedJobs, earningsList, totalEarnings, completedCount: earningsList.length, chatJobs }
+  return { availableJobs, assignedJobs, earningsList, totalEarnings, completedCount: earningsList.length, chatJobs, profile: state.auth.profile }
 }

@@ -1,7 +1,11 @@
 import { useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useGiGood } from '../lib/GiGoodContext'
-import { Role, Category, Availability, Vehicle } from '../types'
+import { Role, Category, Availability, Vehicle, UserProfile } from '../types'
 import * as authApi from '../lib/features/auth/api'
+import * as profileApi from '../lib/features/profile/api'
+import { profileQueryKey } from '../lib/features/profile/types'
+import { getApiErrorMessage } from '../lib/features/jobs/api'
 import { toUserProfile } from '../lib/features/auth/types'
 import type { AuthUserDto, TokenPair } from '../lib/features/auth/types'
 import { disconnectChatHub } from '../lib/features/chat/hub'
@@ -12,6 +16,8 @@ import {
   getRefreshToken,
   setTokens,
 } from '../lib/core/storage/secure-store'
+
+const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
 
 const DEMO_ACCOUNTS: Record<Role, { phone: string; password: string }> = {
   seeker: { phone: '0901234567', password: '123456' },
@@ -28,13 +34,16 @@ type TaskerProfileInput = {
 
 export function useAuth() {
   const { state, dispatch } = useGiGood()
+  const queryClient = useQueryClient()
   const { profile, currentRole, pendingSignupRole, hydrated } = state.auth
 
   const applyProfile = useCallback(
     (user: AuthUserDto) => {
-      dispatch({ type: 'SET_PROFILE', payload: toUserProfile(user) })
+      const next = toUserProfile(user)
+      dispatch({ type: 'SET_PROFILE', payload: next })
+      queryClient.setQueryData(profileQueryKey, next)
     },
-    [dispatch],
+    [dispatch, queryClient],
   )
 
   const completeLogin = useCallback(
@@ -111,8 +120,9 @@ export function useAuth() {
       await authApi.revoke(refreshToken).catch(() => undefined)
     }
     await clearTokens()
+    queryClient.removeQueries({ queryKey: profileQueryKey })
     dispatch({ type: 'SIGN_OUT' })
-  }, [dispatch])
+  }, [dispatch, queryClient])
 
   const hydrate = useCallback(async () => {
     try {
@@ -128,11 +138,35 @@ export function useAuth() {
     }
   }, [applyProfile, dispatch])
 
+  /**
+   * Dual-role switch (task 08). Calls `POST /api/me/switch-role`, mirrors the
+   * new role into the context + `['me']` cache and resolves with it. On a 400
+   * (tasker profile missing) the API message is surfaced as the error message.
+   */
   const switchRole = useCallback(
-    (role: Role) => {
-      dispatch({ type: 'SWITCH_ROLE', payload: role })
+    async (role: Role): Promise<Role> => {
+      if (USE_MOCK) {
+        dispatch({ type: 'SWITCH_ROLE', payload: role })
+        queryClient.setQueryData<UserProfile | null>(profileQueryKey, prev =>
+          prev ? { ...prev, role } : prev,
+        )
+        return role
+      }
+
+      try {
+        const nextRole = await profileApi.switchRole(role)
+        dispatch({ type: 'SWITCH_ROLE', payload: nextRole })
+        queryClient.setQueryData<UserProfile | null>(profileQueryKey, prev =>
+          prev ? { ...prev, role: nextRole } : prev,
+        )
+        return nextRole
+      } catch (error) {
+        throw new Error(
+          getApiErrorMessage(error, 'Không thể chuyển vai trò. Vui lòng thử lại.'),
+        )
+      }
     },
-    [dispatch],
+    [dispatch, queryClient],
   )
 
   const setPendingRole = useCallback(

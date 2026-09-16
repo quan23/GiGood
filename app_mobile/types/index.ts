@@ -1,7 +1,7 @@
 export type Role = 'seeker' | 'tasker'
 export type Category = 'repair' | 'cleaning' | 'delivery' | 'helper'
 export type Availability = 'all-day' | 'morning' | 'afternoon' | 'evening' | 'weekend'
-export type Vehicle = 'motorbike' | 'car' | 'bike' | 'none'
+export type Vehicle = 'motorbike' | 'car' | 'bicycle' | 'none'
 export type JobStatus = 'finding' | 'assigned' | 'completed'
 export type ToastVariant = 'success' | 'error' | 'info'
 export type SeekerSubTab = 'post' | 'jobs' | 'chat' | 'history'

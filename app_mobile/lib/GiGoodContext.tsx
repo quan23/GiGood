@@ -29,7 +29,7 @@ type Action =
             | "afternoon"
             | "evening"
             | "weekend";
-          vehicle: "motorbike" | "car" | "bike" | "none";
+          vehicle: "motorbike" | "car" | "bicycle" | "none";
           verified: boolean;
         };
       };
@@ -96,7 +96,8 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
       const profile: UserProfile = {
         id: "local-seeker",
         name: action.payload.name,
-        avatar: `https://placehold.co/150x150/ea580c/ffffff?text=${encodeURIComponent(action.payload.name.substring(0, 2).toUpperCase())}`,
+        avatar:
+          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
         role: "seeker",
         phone: action.payload.phone,
         location: action.payload.location,
@@ -112,7 +113,8 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
       const profile: UserProfile = {
         id: "local-tasker",
         name: action.payload.name,
-        avatar: `https://placehold.co/150x150/0f766e/ffffff?text=${encodeURIComponent(action.payload.name.substring(0, 2).toUpperCase())}`,
+        avatar:
+          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150",
         role: "tasker",
         phone: action.payload.phone,
         location: action.payload.location,
@@ -192,7 +194,13 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
     case "SWITCH_ROLE":
       return {
         ...state,
-        auth: { ...state.auth, currentRole: action.payload },
+        auth: {
+          ...state.auth,
+          currentRole: action.payload,
+          profile: state.auth.profile
+            ? { ...state.auth.profile, role: action.payload }
+            : null,
+        },
         ui: {
           ...state.ui,
           activeSeekerSubTab: "post",

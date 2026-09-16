@@ -5,6 +5,7 @@ import type {
   UserProfile,
   Vehicle,
 } from '../../../types'
+import { resolveImageUrl } from '../jobs/api'
 
 export type TaskerProfileDto = {
   skills: string[]
@@ -69,7 +70,7 @@ export function toUserProfile(user: AuthUserDto): UserProfile {
   return {
     id: user.id,
     name: user.name,
-    avatar: user.avatarUrl || ROLE_AVATARS[user.currentRole],
+    avatar: resolveImageUrl(user.avatarUrl) || ROLE_AVATARS[user.currentRole],
     role: user.currentRole,
     phone: user.phone,
     location: user.location ?? '',

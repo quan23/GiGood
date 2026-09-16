@@ -5,7 +5,10 @@ import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotifications } from "../../hooks/useNotifications";
+import { useUi } from "../../hooks/useUi";
 import { useWallet } from "../../hooks/useWallet";
+import { SegmentedToggle } from "../../components/ui/SegmentedToggle";
+import type { Role } from "../../types";
 import { CartProvider } from "../../lib/features/wallet/context/CartContext";
 import { connectChatHub } from "../../lib/features/chat/hub";
 import { connectNotificationHub } from "../../lib/features/notifications/hub";
@@ -16,7 +19,9 @@ export default function AppLayout() {
   const { profile, currentRole, switchRole } = useAuth();
   const { balance, escrowHeld, isSeeker } = useWallet();
   const { notifications, unreadCount, clear } = useNotifications();
+  const { showToast } = useUi();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [switchingRole, setSwitchingRole] = useState(false);
   const router = useRouter();
 
   // Foreground-only realtime: connect both hubs once the session is hydrated.
@@ -33,6 +38,34 @@ export default function AppLayout() {
   }
 
   const toggleNotif = () => setNotifOpen(!notifOpen);
+
+  // Task 08: dual-role switch. Becoming a tasker without a profile is blocked
+  // by the API (400) and its message is surfaced as the toast.
+  const handleRoleChange = async (role: Role) => {
+    if (role === currentRole || switchingRole) return;
+    setSwitchingRole(true);
+    try {
+      const nextRole = await switchRole(role);
+      router.replace(
+        nextRole === "seeker" ? "/(app)/(tabs)/post" : "/(app)/(tabs)/board",
+      );
+      showToast(
+        nextRole === "seeker"
+          ? "Đã chuyển sang vai trò Người Thuê."
+          : "Đã chuyển sang vai trò Người Nhận việc.",
+        "success",
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể chuyển vai trò. Vui lòng thử lại.",
+        "error",
+      );
+    } finally {
+      setSwitchingRole(false);
+    }
+  };
 
   return (
     <CartProvider>
@@ -75,53 +108,16 @@ export default function AppLayout() {
         </View>
 
         {/* Role Switcher */}
-        <View className="bg-gray-100 p-1 rounded-xl flex-row mt-3">
-          <TouchableOpacity
-            onPress={() => {
-              if (currentRole !== "seeker") {
-                router.replace("/(app)/(tabs)/post");
-                switchRole("seeker");
-              }
-            }}
-            className="flex-1 py-2 rounded-lg flex-row items-center justify-center space-x-1.5 relative overflow-hidden"
-          >
-            {currentRole === "seeker" && (
-              <View className="absolute inset-0 bg-white shadow-sm rounded-lg" />
-            )}
-            <FontAwesome
-              name="user"
-              size={12}
-              color={currentRole === "seeker" ? "#ea580c" : "#6b7280"}
-            />
-            <Text
-              className={`text-[11px] font-extrabold ${currentRole === "seeker" ? "text-orange-500" : "text-gray-500"}`}
-            >
-              Người Thuê
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              if (currentRole !== "tasker") {
-                router.replace("/(app)/(tabs)/board");
-                switchRole("tasker");
-              }
-            }}
-            className="flex-1 py-2 rounded-lg flex-row items-center justify-center space-x-1.5 relative overflow-hidden"
-          >
-            {currentRole === "tasker" && (
-              <View className="absolute inset-0 bg-white shadow-sm rounded-lg" />
-            )}
-            <FontAwesome
-              name="wrench"
-              size={12}
-              color={currentRole === "tasker" ? "#0f766e" : "#6b7280"}
-            />
-            <Text
-              className={`text-[11px] font-extrabold ${currentRole === "tasker" ? "text-teal-600" : "text-gray-500"}`}
-            >
-              Người Nhận
-            </Text>
-          </TouchableOpacity>
+        <View className="mt-3">
+          <SegmentedToggle
+            options={[
+              { value: "seeker", label: "Người Thuê" },
+              { value: "tasker", label: "Người Nhận" },
+            ]}
+            selected={currentRole}
+            onSelect={(value) => void handleRoleChange(value as Role)}
+            activeColor={isSeeker ? "#ea580c" : "#0f766e"}
+          />
         </View>
 
         {/* Wallet + Escrow cards */}

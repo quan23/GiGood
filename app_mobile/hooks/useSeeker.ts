@@ -9,5 +9,5 @@ export function useSeeker() {
   const history = useMemo(() => jobs.filter(j => j.status === 'completed'), [jobs])
   const chatJobs = useMemo(() => jobs.filter(j => j.status === 'finding' || j.status === 'assigned' || j.status === 'completed'), [jobs])
 
-  return { activeJobs, history, chatJobs }
+  return { activeJobs, history, chatJobs, profile: state.auth.profile }
 }
