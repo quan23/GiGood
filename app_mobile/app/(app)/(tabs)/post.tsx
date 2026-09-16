@@ -1,10 +1,13 @@
-import { View, Text, TouchableOpacity, ScrollView, TextInput } from 'react-native'
+import { useState } from 'react'
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
+import * as ImagePicker from 'expo-image-picker'
 import { useJobs } from '../../../hooks/useJobs'
 import { useUi } from '../../../hooks/useUi'
-import { useState } from 'react'
 import { Category } from '../../../types'
 import { CATEGORY_META } from '../../../lib/categories'
+import { getApiErrorMessage } from '../../../lib/features/jobs/api'
 
 const TEMPLATES = [
   { cat: 'repair' as Category, title: 'Sửa vòi nước bị rò rỉ', budget: 150000 },
@@ -13,15 +16,20 @@ const TEMPLATES = [
   { cat: 'helper' as Category, title: 'Cần người bê vác đồ đạc', budget: 120000 },
 ]
 
+const MAX_IMAGES = 5
+
 export default function PostScreen() {
-  const { postJob } = useJobs()
-  const { showToast, setSeekerSubTab } = useUi()
+  const { createJob, uploadImage } = useJobs()
+  const { showToast } = useUi()
+  const router = useRouter()
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState<Category>('repair')
   const [description, setDescription] = useState('')
   const [budget, setBudget] = useState('')
   const [location, setLocation] = useState('')
   const [urgent, setUrgent] = useState(false)
+  const [images, setImages] = useState<string[]>([])
+  const [submitting, setSubmitting] = useState(false)
 
   const applyTemplate = (cat: Category, t: string, b: number) => {
     setCategory(cat)
@@ -29,19 +37,71 @@ export default function PostScreen() {
     setBudget(String(b))
   }
 
-  const handlePost = () => {
-    if (!title || !description || !budget || !location) {
+  const pickImage = async () => {
+    if (images.length >= MAX_IMAGES) {
+      showToast(`Tối đa ${MAX_IMAGES} ảnh cho mỗi công việc.`, 'error')
+      return
+    }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permission.granted) {
+      showToast('Cần quyền truy cập thư viện ảnh để đính kèm ảnh.', 'error')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+    })
+    if (result.canceled || !result.assets?.[0]) return
+    setImages(prev => [...prev, result.assets[0].uri].slice(0, MAX_IMAGES))
+  }
+
+  const removeImage = (uri: string) => {
+    setImages(prev => prev.filter(item => item !== uri))
+  }
+
+  const handlePost = async () => {
+    if (submitting) return
+    if (!title.trim() || !description.trim() || !budget || !location.trim()) {
       showToast('Vui lòng điền đầy đủ thông tin bắt buộc.', 'error')
       return
     }
-    const b = parseInt(budget.replace(/,/g, ''), 10)
-    if (isNaN(b) || b < 10000) {
+    if (title.trim().length < 5) {
+      showToast('Tiêu đề phải có ít nhất 5 ký tự.', 'error')
+      return
+    }
+    const price = parseInt(budget.replace(/[^0-9]/g, ''), 10)
+    if (isNaN(price) || price < 10000) {
       showToast('Mức giá không hợp lệ.', 'error')
       return
     }
-    postJob(title + (urgent ? ' (Cần liền)' : ''), category, description, b, location)
-    showToast('Đăng việc thành công! Đang tìm Tasker phù hợp...', 'success')
-    setSeekerSubTab('jobs')
+
+    setSubmitting(true)
+    try {
+      const uploaded: string[] = []
+      for (const uri of images) {
+        uploaded.push(await uploadImage(uri))
+      }
+      const job = await createJob({
+        title: title.trim() + (urgent ? ' (Cần liền)' : ''),
+        description: description.trim(),
+        category,
+        price,
+        locationText: location.trim(),
+        images: uploaded,
+      })
+      setTitle('')
+      setDescription('')
+      setBudget('')
+      setLocation('')
+      setUrgent(false)
+      setImages([])
+      showToast('Đăng việc thành công! Đang tìm Tasker phù hợp...', 'success')
+      router.push(`/(app)/job/${job.id}`)
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Không thể đăng việc. Vui lòng thử lại.'), 'error')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const catEntries = Object.entries(CATEGORY_META) as [Category, { label: string; icon: string }][]
@@ -62,6 +122,7 @@ export default function PostScreen() {
               style={{ width: '47%' }}>
               <FontAwesome name={(CATEGORY_META[t.cat]?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={14} color="#ea580c" style={{ marginBottom: 6 }} />
               <Text className="text-[11px] font-bold text-gray-700 leading-tight">{t.title}</Text>
+              <Text className="text-[11px] font-bold text-teal-600 mt-1">{t.budget.toLocaleString('vi-VN')}đ</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -126,6 +187,28 @@ export default function PostScreen() {
           </View>
         </View>
 
+        <View className="space-y-1.5">
+          <Text className="text-xs font-bold text-gray-700">Hình ảnh đính kèm (tuỳ chọn)</Text>
+          <View className="flex-row flex-wrap">
+            {images.map(uri => (
+              <View key={uri} className="relative mr-2.5 mb-2.5">
+                <Image source={{ uri }} className="w-20 h-20 rounded-xl border border-gray-200" />
+                <TouchableOpacity onPress={() => removeImage(uri)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 items-center justify-center">
+                  <FontAwesome name="times" size={10} color="white" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {images.length < MAX_IMAGES && (
+              <TouchableOpacity onPress={pickImage}
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 items-center justify-center">
+                <FontAwesome name="camera" size={16} color="#9ca3af" />
+                <Text className="text-[10px] text-gray-400 mt-1">Thêm ảnh</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         <View className="bg-teal-50 border border-teal-100 rounded-xl p-3 flex-row items-start space-x-2.5">
           <FontAwesome name="shield" size={14} color="#0f766e" style={{ marginTop: 2 }} />
           <Text className="text-[11px] text-teal-800 leading-relaxed flex-1">
@@ -133,10 +216,16 @@ export default function PostScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity onPress={handlePost}
-          className="w-full bg-orange-500 py-3.5 rounded-2xl flex-row items-center justify-center space-x-2 active:opacity-90">
-          <FontAwesome name="paper-plane" size={12} color="white" />
-          <Text className="text-white text-sm font-bold">Đăng việc & Tìm Tasker ngay</Text>
+        <TouchableOpacity onPress={handlePost} disabled={submitting}
+          className={`w-full bg-orange-500 py-3.5 rounded-2xl flex-row items-center justify-center space-x-2 active:opacity-90 ${submitting ? 'opacity-60' : ''}`}>
+          {submitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <>
+              <FontAwesome name="paper-plane" size={12} color="white" />
+              <Text className="text-white text-sm font-bold">Đăng việc & Tìm Tasker ngay</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </ScrollView>

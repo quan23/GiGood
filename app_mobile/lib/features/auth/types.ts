@@ -67,6 +67,7 @@ const ROLE_AVATARS: Record<Role, string> = {
 
 export function toUserProfile(user: AuthUserDto): UserProfile {
   return {
+    id: user.id,
     name: user.name,
     avatar: user.avatarUrl || ROLE_AVATARS[user.currentRole],
     role: user.currentRole,

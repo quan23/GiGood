@@ -1,26 +1,43 @@
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
+import { RefreshControl, ScrollView, Text, View, type DimensionValue } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
-import { useTasker } from '../../../hooks/useTasker'
+import { useRouter } from 'expo-router'
 import { useJobs } from '../../../hooks/useJobs'
-import { useAuth } from '../../../hooks/useAuth'
-import { useUi } from '../../../hooks/useUi'
-import { formatVnd } from '../../../lib/format'
 import { CATEGORY_META } from '../../../lib/categories'
+import { JobCard } from '../../../components/ui/JobCard'
+import { EmptyState } from '../../../components/shared/EmptyState'
+import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
+
+// Demo visual stays (no map SDK): project real lat/lng around the Q1 center.
+const CENTER_LAT = 10.7769
+const CENTER_LNG = 106.7009
+const SPAN = 0.05
+
+function projectMarker(lat: number | null, lng: number | null) {
+  if (lat == null || lng == null) return null
+  const left = 50 + ((lng - CENTER_LNG) / SPAN) * 100
+  const top = 50 - ((lat - CENTER_LAT) / SPAN) * 100
+  return {
+    left: `${Math.min(94, Math.max(6, left))}%` as DimensionValue,
+    top: `${Math.min(92, Math.max(8, top))}%` as DimensionValue,
+  }
+}
 
 export default function BoardScreen() {
-  const { availableJobs } = useTasker()
-  const { acceptJob } = useJobs()
-  const { profile } = useAuth()
-  const { showToast, setTaskerSubTab } = useUi()
+  const { jobs, loading, refreshing, refetch } = useJobs({ status: 'Open' })
+  const router = useRouter()
 
-  const handleAccept = (jobId: number) => {
-    acceptJob(jobId, profile?.name || 'Bạn')
-    showToast('Nhận việc thành công! Hãy liên hệ với khách hàng.', 'success')
-    setTaskerSubTab('active')
+  if (loading) {
+    return <LoadingSpinner text="Đang tải việc gần bạn..." />
   }
 
   return (
-    <ScrollView className="flex-1 px-4 py-4" contentContainerStyle={{ paddingBottom: 24 }}>
+    <ScrollView
+      className="flex-1 px-4 py-4"
+      contentContainerStyle={{ paddingBottom: 24 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor="#0f766e" />
+      }
+    >
       <View className="mb-4">
         <Text className="text-lg font-extrabold text-gray-800">Việc gần bạn</Text>
         <Text className="text-xs text-gray-500">Gợi ý theo vị trí GPS & kỹ năng phù hợp với hồ sơ của bạn</Text>
@@ -41,51 +58,35 @@ export default function BoardScreen() {
             <View className="w-3.5 h-3.5 rounded-full bg-teal-600 border-2 border-white shadow" />
           </View>
         </View>
-        {availableJobs.map(job => (
-          <View key={job.id} className="absolute" style={{ left: job.mapX as any, top: job.mapY as any } as any}>
-            <View className="relative w-7 h-7 -ml-3.5 -mt-3.5 rounded-full bg-orange-500 items-center justify-center border-2 border-white shadow">
-              <FontAwesome name={(CATEGORY_META[job.category]?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={10} color="white" />
+        {jobs.map(job => {
+          const position = projectMarker(job.lat, job.lng)
+          if (!position) return null
+          return (
+            <View key={job.id} className="absolute" style={position}>
+              <View className="relative w-7 h-7 -ml-3.5 -mt-3.5 rounded-full bg-orange-500 items-center justify-center border-2 border-white shadow">
+                <FontAwesome name={(CATEGORY_META[job.category]?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={10} color="white" />
+              </View>
             </View>
-          </View>
-        ))}
+          )
+        })}
       </View>
 
       <View>
         <View className="flex-row items-center justify-between mb-2">
           <Text className="font-bold text-sm text-gray-800">Danh sách việc khả dụng</Text>
-          <Text className="text-[11px] text-gray-400">{availableJobs.length} việc</Text>
+          <Text className="text-[11px] text-gray-400">{jobs.length} việc</Text>
         </View>
 
-        {availableJobs.length === 0 ? (
-          <Text className="text-xs text-gray-400 text-center py-8">Hiện chưa có việc mới gần bạn. Hãy quay lại sau!</Text>
+        {jobs.length === 0 ? (
+          <EmptyState
+            icon="🗺️"
+            title="Chưa có việc nào gần bạn"
+            subtitle="Hãy quay lại sau hoặc làm mới danh sách."
+          />
         ) : (
-          availableJobs.map(job => {
-            const meta = CATEGORY_META[job.category]
-            return (
-              <View key={job.id} className="bg-white border border-gray-200 rounded-2xl p-3.5 space-y-2.5 mb-3">
-                <View className="flex-row items-start justify-between">
-                  <View className="flex-row items-center space-x-2 flex-1">
-                    <View className="w-8 h-8 rounded-lg bg-teal-50 items-center justify-center">
-                      <FontAwesome name={(meta?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={12} color="#0f766e" />
-                    </View>
-                    <View className="flex-1 min-w-0">
-                      <Text className="font-bold text-xs text-gray-800 leading-tight">{job.title}</Text>
-                      <Text className="text-[10px] text-gray-400">{meta?.label} · {job.timeTag}</Text>
-                    </View>
-                  </View>
-                  <Text className="font-bold text-xs text-teal-600 flex-shrink-0 ml-2">{formatVnd(job.budget)}</Text>
-                </View>
-                <Text className="text-[11px] text-gray-500 leading-relaxed" numberOfLines={2}>{job.description}</Text>
-                <Text className="text-[11px] text-gray-500">
-                  <FontAwesome name="map-marker" size={10} color="#9ca3af" /> {job.location}
-                </Text>
-                <TouchableOpacity onPress={() => handleAccept(job.id)}
-                  className="w-full bg-teal-600 py-2.5 rounded-xl items-center">
-                  <Text className="text-white text-xs font-bold">Nhận việc này</Text>
-                </TouchableOpacity>
-              </View>
-            )
-          })
+          jobs.map(job => (
+            <JobCard key={job.id} job={job} onPress={() => router.push(`/(app)/job/${job.id}`)} />
+          ))
         )}
       </View>
     </ScrollView>

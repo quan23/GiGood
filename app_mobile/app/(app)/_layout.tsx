@@ -184,6 +184,7 @@ export default function AppLayout() {
           options={{ presentation: "modal", headerShown: false }}
         />
         <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="job/[id]" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaView>
   );

@@ -16,6 +16,7 @@ export type TaskerProfile = {
 }
 
 export type UserProfile = {
+  id: string
   name: string
   avatar: string
   role: Role
@@ -45,8 +46,8 @@ export type Job = {
   seekerRating: number | null
   taskerRating: number | null
   isCompletedReportedByTasker: boolean
-  mapX: string
-  mapY: string
+  lat: number
+  lng: number
 }
 
 export type Notification = {

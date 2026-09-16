@@ -6,7 +6,7 @@ export const SAMPLE_TASKERS = [
   { name: 'Thành Long P.', avatar: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&q=80&w=150' },
 ]
 
-const INITIAL_JOBS: Job[] = [
+export const INITIAL_JOBS: Job[] = [
   {
     id: 201,
     title: 'Khơi thông thoát sàn toilet tràn nước',
@@ -26,8 +26,8 @@ const INITIAL_JOBS: Job[] = [
     seekerRating: null,
     taskerRating: null,
     isCompletedReportedByTasker: false,
-    mapX: '20%',
-    mapY: '45%',
+    lat: 10.7769,
+    lng: 106.7009,
   },
   {
     id: 202,
@@ -44,8 +44,8 @@ const INITIAL_JOBS: Job[] = [
     seekerRating: null,
     taskerRating: null,
     isCompletedReportedByTasker: false,
-    mapX: '70%',
-    mapY: '35%',
+    lat: 10.786,
+    lng: 106.69,
   },
 ]
 

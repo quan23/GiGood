@@ -40,7 +40,13 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GiGood cần truy cập thư viện ảnh để đính kèm ảnh cho công việc."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

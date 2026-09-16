@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
 import { useTasker } from '../../../hooks/useTasker'
-import { useJobs } from '../../../hooks/useJobs'
+import { useGiGood } from '../../../lib/GiGoodContext'
 import { useUi } from '../../../hooks/useUi'
 import { useRouter } from 'expo-router'
 import { formatVnd } from '../../../lib/format'
@@ -9,12 +9,12 @@ import { CATEGORY_META } from '../../../lib/categories'
 
 export default function ActiveScreen() {
   const { assignedJobs } = useTasker()
-  const { reportCompleted } = useJobs()
+  const { dispatch } = useGiGood()
   const { showToast } = useUi()
   const router = useRouter()
 
   const handleReportComplete = (jobId: number) => {
-    reportCompleted(jobId)
+    dispatch({ type: 'REPORT_COMPLETED', payload: jobId })
     showToast('Đã báo hoàn thành! Đang chờ khách xác nhận và giải ngân.', 'success')
   }
 

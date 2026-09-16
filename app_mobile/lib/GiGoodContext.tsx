@@ -98,6 +98,7 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
 
     case "FINISH_SIGNUP_SEEKER": {
       const profile: UserProfile = {
+        id: "local-seeker",
         name: action.payload.name,
         avatar: `https://placehold.co/150x150/ea580c/ffffff?text=${encodeURIComponent(action.payload.name.substring(0, 2).toUpperCase())}`,
         role: "seeker",
@@ -124,6 +125,7 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
 
     case "FINISH_SIGNUP_TASKER": {
       const profile: UserProfile = {
+        id: "local-tasker",
         name: action.payload.name,
         avatar: `https://placehold.co/150x150/0f766e/ffffff?text=${encodeURIComponent(action.payload.name.substring(0, 2).toUpperCase())}`,
         role: "tasker",
@@ -152,6 +154,7 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
       const isSeeker = action.payload === "seeker";
       const profile: UserProfile = isSeeker
         ? {
+            id: "demo-seeker",
             name: "Khánh Vy",
             avatar:
               "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
@@ -161,6 +164,7 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
             taskerProfile: null,
           }
         : {
+            id: "demo-tasker",
             name: "Minh Quân",
             avatar:
               "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150",
@@ -271,8 +275,8 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
         seekerRating: null as number | null,
         taskerRating: null as number | null,
         isCompletedReportedByTasker: false,
-        mapX: `${20 + Math.floor(Math.random() * 60)}%`,
-        mapY: `${20 + Math.floor(Math.random() * 60)}%`,
+        lat: 10.7769 + (Math.random() - 0.5) * 0.04,
+        lng: 106.7009 + (Math.random() - 0.5) * 0.04,
       };
       return {
         ...state,
