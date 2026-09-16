@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Api.Data;
 using Api.Features.Chat;
 using Api.Features.Jobs;
+using Api.Features.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ namespace Api.Hubs;
 // `access_token` query (OnMessageReceived in Program.cs). Messages are persisted and
 // committed before the broadcast (GLM P8).
 [Authorize]
-public class ChatHub(AppDbContext db) : Hub
+public class ChatHub(AppDbContext db, NotificationService notifications) : Hub
 {
     private const int MaxBodyLength = 2000;
 
@@ -65,6 +66,10 @@ public class ChatHub(AppDbContext db) : Hub
 
         await Clients.Group(job.Id.ToString()).SendAsync("ReceiveMessage", new MessageDto(
             message.Id, message.ConversationId, message.SenderId, message.Body, message.CreatedAt));
+
+        // Task 05: notify the other participants (best-effort, never fails the send).
+        await notifications.NotifyChatMessageAsync(
+            db, job.Id, job.OwnerId, userId, trimmed, Context.ConnectionAborted);
     }
 
     public Task Typing(string jobId, bool isTyping)

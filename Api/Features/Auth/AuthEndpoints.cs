@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Api.Data;
+using Api.Features.Notifications;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,7 @@ public static class AuthEndpoints
         AppDbContext db,
         PasswordHasher hasher,
         JwtProvider jwt,
+        NotificationService notifications,
         CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
@@ -86,6 +88,16 @@ public static class AuthEndpoints
             // Unique index on Phone — covers the race between the check above and the insert.
             return TypedResults.Conflict(new ErrorResponse("Số điện thoại đã được đăng ký."));
         }
+
+        // Task 05: welcome notification (post-commit, best-effort — never fails register).
+        await notifications.CreateAndSendAsync(
+            db,
+            user.Id,
+            NotificationTypes.Welcome,
+            $"Chào mừng {user.Name} đến với GiGood!",
+            "Tài khoản của bạn đã được tạo thành công. Hãy bắt đầu khám phá GiGood!",
+            jobId: null,
+            ct);
 
         return TypedResults.Created(
             $"/api/users/{user.Id}",

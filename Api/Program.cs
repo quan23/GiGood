@@ -4,11 +4,13 @@ using Api.Features.Auth;
 using Api.Features.Chat;
 using Api.Features.Escrows;
 using Api.Features.Jobs;
+using Api.Features.Notifications;
 using Api.Features.Upload;
 using Api.Features.Wallet;
 using Api.Hubs;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -108,6 +110,12 @@ builder.Services.AddSingleton<IValidator<TopUpRequest>, TopUpRequestValidator>()
 // ---------------------------------------------------------------------------
 builder.Services.AddSignalR();
 
+// Task 05: `Clients.User(userId)` resolves through the JWT `sub` claim.
+builder.Services.AddSingleton<IUserIdProvider, SubUserIdProvider>();
+
+// Task 05: persisted notifications + post-commit broadcast helper.
+builder.Services.AddScoped<NotificationService>();
+
 // ---------------------------------------------------------------------------
 // CORS — Expo + web origins, credentials for SignalR.
 // ---------------------------------------------------------------------------
@@ -206,7 +214,9 @@ app.MapAuthEndpoints();
 app.MapChatEndpoints();
 app.MapHub<ChatHub>("/hubs/chat");
 
-// TODO task 05: app.MapHub<NotificationHub>("/hubs/notifications");
+// Task 05: /api/notifications + realtime NotificationHub (server-push only).
+app.MapNotificationsEndpoints();
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
 

@@ -115,6 +115,8 @@ Auth: no `Auth:` = anonymous; `Auth` = Bearer required. All DTOs `FluentValidati
 | POST | `/api/notifications/mark-read` | Yes | `{ids?[] / all:bool}` → 204 |
 | DELETE | `/api/notifications` | Yes | Clear → 204 |
 
+`Type` values: `JobMatched`, `EscrowReleased`, `NewMessage`, plus `Welcome` (register greeting).
+
 ### Upload (`/api/upload`)
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|

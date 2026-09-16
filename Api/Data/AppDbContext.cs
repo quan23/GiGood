@@ -2,6 +2,7 @@ using Api.Features.Auth;
 using Api.Features.Chat;
 using Api.Features.Escrows;
 using Api.Features.Jobs;
+using Api.Features.Notifications;
 using Api.Features.Wallet;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,8 +26,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>(); // task 06
     public DbSet<Escrow> Escrows => Set<Escrow>();                             // task 06
 
-    // TODO task 05-07: add remaining DbSets as features land.
-    // public DbSet<Notification> Notifications => Set<Notification>();           // task 05
+    public DbSet<Notification> Notifications => Set<Notification>();           // task 05
+
+    // TODO task 07: add remaining DbSets as features land.
     // public DbSet<Review> Reviews => Set<Review>();                             // task 07
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -181,6 +183,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(a => a.WorkerId);
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.Property(n => n.Type).HasMaxLength(32);
+            entity.Property(n => n.Title).HasMaxLength(200);
+            entity.Property(n => n.Body).HasMaxLength(500);
+
+            // Newest-first pages per user: (UserId, Read, CreatedAt desc).
+            entity.HasIndex(n => new { n.UserId, n.Read, n.CreatedAt }).IsDescending(false, false, true);
+
+            entity.HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Job>()
+                .WithMany()
+                .HasForeignKey(n => n.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -4,6 +4,7 @@ using Api.Common;
 using Api.Data;
 using Api.Features.Auth;
 using Api.Features.Escrows;
+using Api.Features.Notifications;
 using Api.Features.Wallet;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -174,6 +175,7 @@ public static class JobsEndpoints
         IValidator<CreateJobRequest> validator,
         ClaimsPrincipal principal,
         AppDbContext db,
+        NotificationService notifications,
         CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
@@ -214,6 +216,10 @@ public static class JobsEndpoints
 
         db.Jobs.Add(job);
         await db.SaveChangesAsync(ct);
+
+        // Task 05: announce the new job to seekers (owner excluded), capped. Post-commit
+        // + best-effort.
+        await notifications.NotifyNewJobAsync(db, job, ct);
 
         return TypedResults.Created($"/api/jobs/{job.Id}", ToDto(job));
     }
@@ -350,6 +356,7 @@ public static class JobsEndpoints
         Guid id,
         ClaimsPrincipal principal,
         AppDbContext db,
+        NotificationService notifications,
         CancellationToken ct)
     {
         var userId = GetUserId(principal);
@@ -458,6 +465,21 @@ public static class JobsEndpoints
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
 
+            // Task 05: tell the owner who accepted (post-commit, best-effort).
+            var taskerName = await db.Users.AsNoTracking()
+                .Where(u => u.Id == userId.Value)
+                .Select(u => u.Name)
+                .SingleOrDefaultAsync(ct) ?? "Người nhận việc";
+
+            await notifications.CreateAndSendAsync(
+                db,
+                job.OwnerId,
+                NotificationTypes.JobMatched,
+                "Có người nhận việc",
+                $"{taskerName} đã nhận \"{job.Title}\"",
+                job.Id,
+                ct);
+
             return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), ownerWallet.Balance));
         }
         catch (DbUpdateConcurrencyException)
@@ -476,6 +498,7 @@ public static class JobsEndpoints
         Guid id,
         ClaimsPrincipal principal,
         AppDbContext db,
+        NotificationService notifications,
         CancellationToken ct)
     {
         var userId = GetUserId(principal);
@@ -514,6 +537,21 @@ public static class JobsEndpoints
             return Conflict("Công việc vừa được cập nhật, vui lòng thử lại.");
         }
 
+        // Task 05: tell the owner the tasker reported completion (post-commit, best-effort).
+        var taskerName = await db.Users.AsNoTracking()
+            .Where(u => u.Id == userId.Value)
+            .Select(u => u.Name)
+            .SingleOrDefaultAsync(ct) ?? "Người nhận việc";
+
+        await notifications.CreateAndSendAsync(
+            db,
+            job.OwnerId,
+            NotificationTypes.JobMatched,
+            "Tasker báo hoàn thành",
+            $"{taskerName} đã báo hoàn thành \"{job.Title}\"",
+            job.Id,
+            ct);
+
         return TypedResults.NoContent();
     }
 
@@ -522,6 +560,7 @@ public static class JobsEndpoints
         Guid id,
         ClaimsPrincipal principal,
         AppDbContext db,
+        NotificationService notifications,
         CancellationToken ct)
     {
         var userId = GetUserId(principal);
@@ -582,6 +621,16 @@ public static class JobsEndpoints
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
 
+            // Task 05: tell the payee the escrow was released (post-commit, best-effort).
+            await notifications.CreateAndSendAsync(
+                db,
+                escrow.PayeeId,
+                NotificationTypes.EscrowReleased,
+                "Đã giải ngân",
+                $"Bạn nhận được {NotificationService.FormatVnd(escrow.Amount)} cho \"{job.Title}\"",
+                job.Id,
+                ct);
+
             return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), payeeWallet.Balance));
         }
         catch (DbUpdateConcurrencyException)
@@ -596,6 +645,7 @@ public static class JobsEndpoints
         Guid id,
         ClaimsPrincipal principal,
         AppDbContext db,
+        NotificationService notifications,
         CancellationToken ct)
     {
         var userId = GetUserId(principal);
@@ -664,6 +714,16 @@ public static class JobsEndpoints
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
+                // Task 05: owner cancelled — tell the payee (post-commit, best-effort).
+                await notifications.CreateAndSendAsync(
+                    db,
+                    escrow.PayeeId,
+                    NotificationTypes.EscrowReleased,
+                    "Việc đã huỷ",
+                    $"\"{job.Title}\" đã bị huỷ. Khoản {NotificationService.FormatVnd(escrow.Amount)} đã được hoàn lại cho người đăng.",
+                    job.Id,
+                    ct);
+
                 return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), payerWallet.Balance));
             }
 
@@ -686,6 +746,7 @@ public static class JobsEndpoints
         Guid id,
         ClaimsPrincipal principal,
         AppDbContext db,
+        NotificationService notifications,
         CancellationToken ct)
     {
         var userId = GetUserId(principal);
@@ -741,6 +802,21 @@ public static class JobsEndpoints
 
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
+
+            // Task 05: payee abandoned — tell the payer (post-commit, best-effort).
+            var taskerName = await db.Users.AsNoTracking()
+                .Where(u => u.Id == userId.Value)
+                .Select(u => u.Name)
+                .SingleOrDefaultAsync(ct) ?? "Người nhận việc";
+
+            await notifications.CreateAndSendAsync(
+                db,
+                escrow.PayerId,
+                NotificationTypes.EscrowReleased,
+                "Đã hoàn tiền",
+                $"{taskerName} đã huỷ nhận \"{job.Title}\". Bạn được hoàn {NotificationService.FormatVnd(escrow.Amount)} vào ví.",
+                job.Id,
+                ct);
 
             return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), payerWallet.Balance));
         }

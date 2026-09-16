@@ -5,6 +5,7 @@ using Api.Data;
 using Api.Features.Auth;
 using Api.Features.Escrows;
 using Api.Features.Jobs;
+using Api.Features.Notifications;
 using Api.Hubs;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -183,6 +184,7 @@ public static class ChatEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         IHubContext<ChatHub> hub,
+        NotificationService notifications,
         CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
@@ -225,6 +227,10 @@ public static class ChatEndpoints
 
         // Post-commit fan-out (GLM P8) so REST sends also reach hub listeners.
         await hub.Clients.Group(conversation.JobId.ToString()).SendAsync("ReceiveMessage", dto);
+
+        // Task 05: notify the other participants (best-effort, never fails the send).
+        await notifications.NotifyChatMessageAsync(
+            db, conversation.JobId, conversation.Job.OwnerId, userId.Value, message.Body, ct);
 
         return TypedResults.Created($"/api/conversations/{conversation.Id}/messages/{message.Id}", dto);
     }
