@@ -3,6 +3,7 @@ using Api.Features.Chat;
 using Api.Features.Escrows;
 using Api.Features.Jobs;
 using Api.Features.Notifications;
+using Api.Features.Ratings;
 using Api.Features.Wallet;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,8 +29,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<Notification> Notifications => Set<Notification>();           // task 05
 
-    // TODO task 07: add remaining DbSets as features land.
-    // public DbSet<Review> Reviews => Set<Review>();                             // task 07
+    public DbSet<Review> Reviews => Set<Review>();                             // task 07
+
+    // TODO task 08+: add remaining DbSets as features land.
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -201,6 +203,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasOne<Job>()
                 .WithMany()
                 .HasForeignKey(n => n.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.Property(r => r.Comment).HasMaxLength(1000);
+            entity.ToTable(t => t.HasCheckConstraint("CK_Reviews_Rate_Range", "\"Rate\" BETWEEN 1 AND 5"));
+
+            // One review per reviewer per job — the unique index backs the double-rate 409.
+            entity.HasIndex(r => new { r.JobId, r.ReviewerId }).IsUnique();
+            // Received-rating history pages newest-first by (ReviewerId, CreatedAt desc).
+            entity.HasIndex(r => new { r.ReviewerId, r.CreatedAt }).IsDescending(false, true);
+
+            entity.HasOne(r => r.Job)
+                .WithMany()
+                .HasForeignKey(r => r.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.Reviewer)
+                .WithMany()
+                .HasForeignKey(r => r.ReviewerId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

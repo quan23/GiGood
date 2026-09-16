@@ -46,4 +46,8 @@ public sealed record JobListResponse(List<JobDto> Jobs, string? NextCursor);
 // Task 06 escrow transitions return the updated escrow + the credited/debited wallet balance.
 public sealed record JobEscrowResponse(EscrowDto Escrow, decimal Balance);
 
+// Task 07: optional rating on release. The review is created best-effort after the escrow
+// has committed, so invalid payloads are skipped (never fail the release) — no validator.
+public sealed record ReleaseEscrowRequest(int? Rating, string? Comment);
+
 public sealed record CategoryDto(string Key, string Label, string Icon);

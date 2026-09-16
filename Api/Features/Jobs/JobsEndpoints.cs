@@ -5,6 +5,7 @@ using Api.Data;
 using Api.Features.Auth;
 using Api.Features.Escrows;
 using Api.Features.Notifications;
+using Api.Features.Ratings;
 using Api.Features.Wallet;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -556,11 +557,14 @@ public static class JobsEndpoints
     }
 
     // Task 06: payer confirms completion -> escrow Released + payee credited + job Done.
+    // Task 07: an optional `{rating?, comment?}` body creates a review (payer rates payee).
     private static async Task<Results<Ok<JobEscrowResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> ReleaseEscrowAsync(
         Guid id,
+        ReleaseEscrowRequest? request,
         ClaimsPrincipal principal,
         AppDbContext db,
         NotificationService notifications,
+        ReviewService reviews,
         CancellationToken ct)
     {
         var userId = GetUserId(principal);
@@ -630,6 +634,10 @@ public static class JobsEndpoints
                 $"Bạn nhận được {NotificationService.FormatVnd(escrow.Amount)} cho \"{job.Title}\"",
                 job.Id,
                 ct);
+
+            // Task 07: optional rating -> review from the payer to the payee. Best-effort:
+            // the release already committed, so a bad/duplicate rating only logs a warning.
+            await reviews.TryCreateAsync(db, job.Id, userId.Value, request?.Rating, request?.Comment, ct);
 
             return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), payeeWallet.Balance));
         }

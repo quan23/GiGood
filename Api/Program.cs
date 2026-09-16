@@ -5,6 +5,7 @@ using Api.Features.Chat;
 using Api.Features.Escrows;
 using Api.Features.Jobs;
 using Api.Features.Notifications;
+using Api.Features.Ratings;
 using Api.Features.Upload;
 using Api.Features.Wallet;
 using Api.Hubs;
@@ -104,6 +105,13 @@ builder.Services.AddSingleton<IValidator<SendMessageRequest>, SendMessageRequest
 // Wallet slice (task 06) — FluentValidation rules for the topup stub.
 // ---------------------------------------------------------------------------
 builder.Services.AddSingleton<IValidator<TopUpRequest>, TopUpRequestValidator>();
+
+// ---------------------------------------------------------------------------
+// Ratings slice (task 07) — review writes + RatingAvg recompute. The release-escrow
+// endpoint reuses the service best-effort.
+// ---------------------------------------------------------------------------
+builder.Services.AddSingleton<IValidator<CreateRatingRequest>, CreateRatingRequestValidator>();
+builder.Services.AddScoped<ReviewService>();
 
 // ---------------------------------------------------------------------------
 // SignalR (in-box). Hubs are mapped below.
@@ -206,6 +214,9 @@ app.MapUploadEndpoints();
 // Task 06: /api/wallet (balance/transactions/topup) + /api/escrows.
 app.MapWalletEndpoints();
 app.MapEscrowsEndpoints();
+
+// Task 07: /api/ratings + /api/users/{id}/rating.
+app.MapRatingsEndpoints();
 
 // Task 01: /api/auth/* + /api/me.
 app.MapAuthEndpoints();
