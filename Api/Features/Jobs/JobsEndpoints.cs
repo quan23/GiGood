@@ -3,9 +3,12 @@ using System.Text;
 using Api.Common;
 using Api.Data;
 using Api.Features.Auth;
+using Api.Features.Escrows;
+using Api.Features.Wallet;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Api.Features.Jobs;
 
@@ -26,11 +29,19 @@ public static class JobsEndpoints
         group.MapPatch("/{id:guid}", UpdateAsync);
         group.MapDelete("/{id:guid}", DeleteAsync);
 
+        // Task 06: escrow lifecycle.
+        group.MapPost("/{id:guid}/accept", AcceptAsync);
+        group.MapPost("/{id:guid}/report", ReportAsync);
+        group.MapPost("/{id:guid}/release-escrow", ReleaseEscrowAsync);
+        group.MapPost("/{id:guid}/cancel", CancelAsync);
+        group.MapPost("/{id:guid}/refund", RefundAsync);
+
         return app;
     }
 
-    private static async Task<Results<Ok<JobListResponse>, ValidationProblem>> ListAsync(
+    private static async Task<Results<Ok<JobListResponse>, ValidationProblem, UnauthorizedHttpResult>> ListAsync(
         AppDbContext db,
+        ClaimsPrincipal principal,
         CancellationToken ct,
         string? status = null,
         string? category = null,
@@ -39,7 +50,8 @@ public static class JobsEndpoints
         double? lng = null,
         double? radius = null,
         string? cursor = null,
-        int? limit = null)
+        int? limit = null,
+        bool? mine = null)
     {
         JobStatus? statusFilter = null;
         if (!string.IsNullOrWhiteSpace(status))
@@ -66,6 +78,23 @@ public static class JobsEndpoints
         var pageSize = Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit);
 
         IQueryable<Job> query = db.Jobs.AsNoTracking().Include(j => j.Owner);
+
+        if (mine == true)
+        {
+            var userId = GetUserId(principal);
+            if (userId is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            var me = userId.Value;
+
+            // Task 06: owner's own jobs + jobs where the caller is the accepted payee
+            // (Held/Released) — feeds the seeker "finding" and tasker "active" lists.
+            query = query.Where(j => j.OwnerId == me
+                || db.Escrows.Any(e => e.JobId == j.Id && e.PayeeId == me
+                    && (e.Status == EscrowStatus.Held || e.Status == EscrowStatus.Released)));
+        }
 
         if (statusFilter is { } statusValue)
         {
@@ -279,7 +308,7 @@ public static class JobsEndpoints
         return TypedResults.Ok(ToDto(job));
     }
 
-    private static async Task<Results<NoContent, NotFound<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> DeleteAsync(
+    private static async Task<Results<NoContent, NotFound<ErrorResponse>, Conflict<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> DeleteAsync(
         Guid id,
         ClaimsPrincipal principal,
         AppDbContext db,
@@ -302,11 +331,426 @@ public static class JobsEndpoints
             return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không phải chủ công việc.");
         }
 
+        // Task 06: money is held — the owner must cancel (refund) before deleting.
+        if (await db.Escrows.AnyAsync(e => e.JobId == id && e.Status == EscrowStatus.Held, ct))
+        {
+            return TypedResults.Conflict(new ErrorResponse("Công việc đang có ký quỹ, hãy hủy trước khi xóa."));
+        }
+
         db.Jobs.Remove(job);
         await db.SaveChangesAsync(ct);
 
         return TypedResults.NoContent();
     }
+
+    // Task 06: single-winner accept. Opens one transaction, holds the owner's escrow,
+    // debits the payer wallet, writes the Hold ledger row + JobApplications row and
+    // flips the job to Assigned. Reuses a Refunded escrow row on re-accept.
+    private static async Task<Results<Ok<JobEscrowResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> AcceptAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var userId = GetUserId(principal);
+        if (userId is null)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        try
+        {
+            var job = await db.Jobs.SingleOrDefaultAsync(j => j.Id == id, ct);
+            if (job is null)
+            {
+                return TypedResults.NotFound(new ErrorResponse("Không tìm thấy công việc."));
+            }
+
+            if (job.OwnerId == userId)
+            {
+                return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không thể nhận việc của chính mình.");
+            }
+
+            if (job.Status != JobStatus.Open)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Công việc đã có người nhận hoặc không còn mở."));
+            }
+
+            var ownerWallet = await db.Wallets.SingleOrDefaultAsync(w => w.UserId == job.OwnerId, ct);
+            if (ownerWallet is null)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Ví của người đăng việc không tồn tại."));
+            }
+
+            // Balance gate BEFORE any writes.
+            if (ownerWallet.Balance < job.Price)
+            {
+                return TypedResults.BadRequest(new ErrorResponse("Số dư ví của người đăng không đủ để ký quỹ."));
+            }
+
+            var escrow = await db.Escrows.SingleOrDefaultAsync(e => e.JobId == job.Id, ct);
+            var now = DateTime.UtcNow;
+
+            if (escrow is null)
+            {
+                escrow = new Escrow
+                {
+                    Id = GuidV7.NewGuid(),
+                    JobId = job.Id,
+                    PayerId = job.OwnerId,
+                    PayeeId = userId.Value,
+                    Amount = job.Price,
+                    Status = EscrowStatus.Held,
+                    HeldAt = now,
+                };
+                db.Escrows.Add(escrow);
+            }
+            else
+            {
+                // Unique Escrows(JobId) allows re-accept only after a refund.
+                if (escrow.Status != EscrowStatus.Refunded)
+                {
+                    return TypedResults.Conflict(new ErrorResponse("Công việc đã có người nhận."));
+                }
+
+                escrow.PayerId = job.OwnerId;
+                escrow.PayeeId = userId.Value;
+                escrow.Amount = job.Price;
+                escrow.Status = EscrowStatus.Held;
+                escrow.HeldAt = now;
+                escrow.ReleasedAt = null;
+            }
+
+            ownerWallet.Balance -= job.Price;
+            db.WalletTransactions.Add(new WalletTransaction
+            {
+                Id = GuidV7.NewGuid(),
+                UserId = job.OwnerId,
+                Type = WalletTransactionType.Hold,
+                Amount = -job.Price,
+                RefJobId = job.Id,
+                CreatedAt = now,
+            });
+
+            var application = await db.JobApplications
+                .SingleOrDefaultAsync(a => a.JobId == job.Id && a.WorkerId == userId.Value, ct);
+            if (application is null)
+            {
+                db.JobApplications.Add(new JobApplication
+                {
+                    JobId = job.Id,
+                    WorkerId = userId.Value,
+                    Status = "Accepted",
+                    CreatedAt = now,
+                });
+            }
+            else
+            {
+                application.Status = "Accepted";
+                application.CreatedAt = now;
+            }
+
+            job.Status = JobStatus.Assigned;
+            job.UpdatedAt = now;
+
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+
+            return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), ownerWallet.Balance));
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Công việc vừa được người khác nhận. Vui lòng thử lại.");
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Unique Escrows(JobId): the other concurrent accept won.
+            return Conflict("Công việc vừa được người khác nhận.");
+        }
+    }
+
+    // Task 06: the payee marks work as done; the owner then releases or cancels.
+    private static async Task<Results<NoContent, NotFound<ErrorResponse>, Conflict<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> ReportAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var userId = GetUserId(principal);
+        if (userId is null)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var job = await db.Jobs.SingleOrDefaultAsync(j => j.Id == id, ct);
+        if (job is null)
+        {
+            return TypedResults.NotFound(new ErrorResponse("Không tìm thấy công việc."));
+        }
+
+        var isPayee = await db.Escrows.AsNoTracking().AnyAsync(
+            e => e.JobId == id && e.PayeeId == userId && e.Status == EscrowStatus.Held, ct);
+        if (!isPayee || job.Status != JobStatus.Assigned)
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không phải người nhận việc của công việc này.");
+        }
+
+        if (job.IsCompletedReported)
+        {
+            return TypedResults.NoContent(); // idempotent
+        }
+
+        job.IsCompletedReported = true;
+        job.UpdatedAt = DateTime.UtcNow;
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Công việc vừa được cập nhật, vui lòng thử lại.");
+        }
+
+        return TypedResults.NoContent();
+    }
+
+    // Task 06: payer confirms completion -> escrow Released + payee credited + job Done.
+    private static async Task<Results<Ok<JobEscrowResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> ReleaseEscrowAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var userId = GetUserId(principal);
+        if (userId is null)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        try
+        {
+            var job = await db.Jobs.SingleOrDefaultAsync(j => j.Id == id, ct);
+            if (job is null)
+            {
+                return TypedResults.NotFound(new ErrorResponse("Không tìm thấy công việc."));
+            }
+
+            var escrow = await db.Escrows.SingleOrDefaultAsync(e => e.JobId == id, ct);
+            if (escrow is null)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Công việc chưa có ký quỹ."));
+            }
+
+            if (escrow.PayerId != userId)
+            {
+                return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không phải người trả tiền của công việc này.");
+            }
+
+            if (escrow.Status != EscrowStatus.Held)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Khoản ký quỹ không còn đang được giữ."));
+            }
+
+            var payeeWallet = await db.Wallets.SingleOrDefaultAsync(w => w.UserId == escrow.PayeeId, ct);
+            if (payeeWallet is null)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Ví của người nhận việc không tồn tại."));
+            }
+
+            var now = DateTime.UtcNow;
+            payeeWallet.Balance += escrow.Amount;
+            db.WalletTransactions.Add(new WalletTransaction
+            {
+                Id = GuidV7.NewGuid(),
+                UserId = escrow.PayeeId,
+                Type = WalletTransactionType.Release,
+                Amount = escrow.Amount,
+                RefJobId = job.Id,
+                CreatedAt = now,
+            });
+
+            escrow.Status = EscrowStatus.Released;
+            escrow.ReleasedAt = now;
+            job.Status = JobStatus.Done;
+            job.UpdatedAt = now;
+
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+
+            return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), payeeWallet.Balance));
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Công việc vừa được cập nhật, vui lòng thử lại.");
+        }
+    }
+
+    // Task 06: owner cancels. Open -> Cancelled (no ledger); Assigned & not reported ->
+    // refund the Held escrow to the payer and set Cancelled.
+    private static async Task<Results<Ok<JobEscrowResponse>, NoContent, NotFound<ErrorResponse>, Conflict<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> CancelAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var userId = GetUserId(principal);
+        if (userId is null)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        try
+        {
+            var job = await db.Jobs.SingleOrDefaultAsync(j => j.Id == id, ct);
+            if (job is null)
+            {
+                return TypedResults.NotFound(new ErrorResponse("Không tìm thấy công việc."));
+            }
+
+            if (job.OwnerId != userId)
+            {
+                return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không phải chủ công việc.");
+            }
+
+            if (job.Status == JobStatus.Cancelled)
+            {
+                return TypedResults.NoContent(); // idempotent
+            }
+
+            if (job.Status == JobStatus.Done)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Công việc đã hoàn thành, không thể hủy."));
+            }
+
+            if (job.Status == JobStatus.Assigned && job.IsCompletedReported)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Người nhận việc đã báo hoàn thành, hãy giải ngân thay vì hủy."));
+            }
+
+            var escrow = await db.Escrows.SingleOrDefaultAsync(e => e.JobId == id, ct);
+            var now = DateTime.UtcNow;
+
+            if (escrow is { Status: EscrowStatus.Held })
+            {
+                var payerWallet = await db.Wallets.SingleOrDefaultAsync(w => w.UserId == escrow.PayerId, ct);
+                if (payerWallet is null)
+                {
+                    return TypedResults.Conflict(new ErrorResponse("Ví của bạn không tồn tại."));
+                }
+
+                payerWallet.Balance += escrow.Amount;
+                db.WalletTransactions.Add(new WalletTransaction
+                {
+                    Id = GuidV7.NewGuid(),
+                    UserId = escrow.PayerId,
+                    Type = WalletTransactionType.Refund,
+                    Amount = escrow.Amount,
+                    RefJobId = job.Id,
+                    CreatedAt = now,
+                });
+
+                escrow.Status = EscrowStatus.Refunded;
+                escrow.ReleasedAt = now;
+                job.Status = JobStatus.Cancelled;
+                job.UpdatedAt = now;
+
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), payerWallet.Balance));
+            }
+
+            job.Status = JobStatus.Cancelled;
+            job.UpdatedAt = now;
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+
+            return TypedResults.NoContent();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Công việc vừa được cập nhật, vui lòng thử lại.");
+        }
+    }
+
+    // Task 06: payee abandons a Held escrow. Same refund path as cancel but the job
+    // goes back to the board (Open) instead of Cancelled.
+    private static async Task<Results<Ok<JobEscrowResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> RefundAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var userId = GetUserId(principal);
+        if (userId is null)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        try
+        {
+            var job = await db.Jobs.SingleOrDefaultAsync(j => j.Id == id, ct);
+            if (job is null)
+            {
+                return TypedResults.NotFound(new ErrorResponse("Không tìm thấy công việc."));
+            }
+
+            var escrow = await db.Escrows.SingleOrDefaultAsync(e => e.JobId == id, ct);
+            if (escrow is null || escrow.Status != EscrowStatus.Held)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Khoản ký quỹ không còn đang được giữ."));
+            }
+
+            if (escrow.PayeeId != userId)
+            {
+                return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không phải người nhận việc của công việc này.");
+            }
+
+            var payerWallet = await db.Wallets.SingleOrDefaultAsync(w => w.UserId == escrow.PayerId, ct);
+            if (payerWallet is null)
+            {
+                return TypedResults.Conflict(new ErrorResponse("Ví của người đăng việc không tồn tại."));
+            }
+
+            var now = DateTime.UtcNow;
+            payerWallet.Balance += escrow.Amount;
+            db.WalletTransactions.Add(new WalletTransaction
+            {
+                Id = GuidV7.NewGuid(),
+                UserId = escrow.PayerId,
+                Type = WalletTransactionType.Refund,
+                Amount = escrow.Amount,
+                RefJobId = job.Id,
+                CreatedAt = now,
+            });
+
+            escrow.Status = EscrowStatus.Refunded;
+            escrow.ReleasedAt = now;
+            job.Status = JobStatus.Open;
+            job.IsCompletedReported = false; // fresh cycle if the job is re-accepted
+            job.UpdatedAt = now;
+
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+
+            return TypedResults.Ok(new JobEscrowResponse(EscrowDto.From(escrow), payerWallet.Balance));
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Công việc vừa được cập nhật, vui lòng thử lại.");
+        }
+    }
+
+    private static Conflict<ErrorResponse> Conflict(string message) => TypedResults.Conflict(new ErrorResponse(message));
 
     private static JobDto ToDto(Job job, double? distanceKm = null) => new(
         job.Id,

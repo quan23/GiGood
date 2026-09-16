@@ -1,6 +1,8 @@
 using Api.Features.Auth;
 using Api.Features.Chat;
+using Api.Features.Escrows;
 using Api.Features.Jobs;
+using Api.Features.Wallet;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Data;
@@ -18,12 +20,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Conversation> Conversations => Set<Conversation>();           // task 04
     public DbSet<Message> Messages => Set<Message>();                          // task 04
 
+    public DbSet<JobApplication> JobApplications => Set<JobApplication>();     // task 06
+    public DbSet<Wallet> Wallets => Set<Wallet>();                             // task 06
+    public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>(); // task 06
+    public DbSet<Escrow> Escrows => Set<Escrow>();                             // task 06
+
     // TODO task 05-07: add remaining DbSets as features land.
-    // public DbSet<JobApplication> JobApplications => Set<JobApplication>();     // task 02/06
     // public DbSet<Notification> Notifications => Set<Notification>();           // task 05
-    // public DbSet<Wallet> Wallets => Set<Wallet>();                             // task 06
-    // public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>(); // task 06
-    // public DbSet<Escrow> Escrows => Set<Escrow>();                             // task 06
     // public DbSet<Review> Reviews => Set<Review>();                             // task 07
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -108,6 +111,76 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(m => m.SenderId);
+        });
+
+        modelBuilder.Entity<Wallet>(entity =>
+        {
+            entity.HasKey(w => w.UserId);
+            entity.Property(w => w.Balance).HasPrecision(18, 0);
+            entity.ToTable(t => t.HasCheckConstraint("CK_Wallets_Balance_NonNegative", "\"Balance\" >= 0"));
+
+            // Task 06: this pair is what Npgsql maps to the system `xmin` column
+            // (xid store type, concurrency token) — same model shape as Jobs.Version.
+            entity.Property(w => w.Version).IsConcurrencyToken().ValueGeneratedOnAddOrUpdate();
+
+            entity.HasOne(w => w.User)
+                .WithOne()
+                .HasForeignKey<Wallet>(w => w.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WalletTransaction>(entity =>
+        {
+            entity.Property(t => t.Type).HasConversion<string>();
+            entity.Property(t => t.Amount).HasPrecision(18, 0);
+
+            // Ledger history pages newest-first by (CreatedAt, Id).
+            entity.HasIndex(t => new { t.UserId, t.CreatedAt }).IsDescending(false, true);
+
+            entity.HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Escrow>(entity =>
+        {
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.Amount).HasPrecision(18, 0);
+
+            // One escrow per job; re-accept reuses the row after a refund.
+            entity.HasIndex(e => e.JobId).IsUnique();
+            entity.HasIndex(e => new { e.PayerId, e.PayeeId });
+
+            entity.HasOne(e => e.Job)
+                .WithOne()
+                .HasForeignKey<Escrow>(e => e.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Payer)
+                .WithMany()
+                .HasForeignKey(e => e.PayerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Payee)
+                .WithMany()
+                .HasForeignKey(e => e.PayeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<JobApplication>(entity =>
+        {
+            entity.HasKey(a => new { a.JobId, a.WorkerId });
+            entity.Property(a => a.Offer).HasPrecision(18, 0);
+
+            entity.HasOne(a => a.Job)
+                .WithMany()
+                .HasForeignKey(a => a.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(a => a.Worker)
+                .WithMany()
+                .HasForeignKey(a => a.WorkerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(a => a.WorkerId);
         });
     }
 }

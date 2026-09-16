@@ -75,6 +75,7 @@ public static class AuthEndpoints
 
         db.Users.Add(user);
         db.RefreshTokens.Add(refreshToken);
+        db.Wallets.Add(new Api.Features.Wallet.Wallet { UserId = user.Id, Balance = 0 }); // task 06: one wallet per user
 
         try
         {

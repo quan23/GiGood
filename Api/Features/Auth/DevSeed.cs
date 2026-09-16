@@ -57,6 +57,46 @@ public static class DevSeed
             {
                 await db.SaveChangesAsync();
             }
+
+            // Task 06: backfill one wallet per demo user, only when the row is missing.
+            // Demo balances mimic the old Expo demo (Khánh Vy 1.42M / Minh Quân 2.85M).
+            var walletsSeeded = false;
+            foreach (var (phone, balance) in new (string Phone, decimal Balance)[]
+                     {
+                         ("0901234567", 1_420_000m),
+                         ("0912345678", 2_850_000m),
+                     })
+            {
+                var user = await db.Users.SingleOrDefaultAsync(u => u.Phone == phone);
+                if (user is null || await db.Wallets.AnyAsync(w => w.UserId == user.Id))
+                {
+                    continue;
+                }
+
+                db.Wallets.Add(new Api.Features.Wallet.Wallet { UserId = user.Id, Balance = balance });
+                walletsSeeded = true;
+            }
+
+            if (walletsSeeded)
+            {
+                await db.SaveChangesAsync();
+            }
+
+            // Any other existing user (registered before wallets existed) gets a zero wallet
+            // so balance/topup endpoints never 404 in dev. Runs after the save above so the
+            // demo rows are already persisted when this query executes.
+            var usersWithoutWallet = await db.Users
+                .Where(u => !db.Wallets.Any(w => w.UserId == u.Id))
+                .ToListAsync();
+            if (usersWithoutWallet.Count > 0)
+            {
+                foreach (var user in usersWithoutWallet)
+                {
+                    db.Wallets.Add(new Api.Features.Wallet.Wallet { UserId = user.Id, Balance = 0m });
+                }
+
+                await db.SaveChangesAsync();
+            }
         }
         catch (Exception ex)
         {

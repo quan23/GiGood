@@ -3,6 +3,7 @@ using System.Text;
 using Api.Common;
 using Api.Data;
 using Api.Features.Auth;
+using Api.Features.Escrows;
 using Api.Features.Jobs;
 using Api.Hubs;
 using FluentValidation;
@@ -31,7 +32,7 @@ public static class ChatEndpoints
     }
 
     // Idempotent: one conversation per job (unique index). Existing -> 200, created -> 201.
-    // Owner may always create; anyone can create on an Open job; otherwise 403.
+    // Owner may always create; owner/payee (or anyone on an Open job) may participate (task 06).
     private static async Task<Results<Ok<ConversationDto>, Created<ConversationDto>, ValidationProblem, NotFound<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> CreateAsync(
         CreateConversationRequest request,
         IValidator<CreateConversationRequest> validator,
@@ -57,7 +58,7 @@ public static class ChatEndpoints
             return TypedResults.NotFound(new ErrorResponse("Không tìm thấy công việc."));
         }
 
-        if (!CanParticipate(job.OwnerId, job.Status, userId.Value))
+        if (!await ChatAccess.CanParticipateAsync(db, job.Id, job.OwnerId, job.Status, userId.Value, ct))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không phải là người tham gia công việc này.");
         }
@@ -97,10 +98,9 @@ public static class ChatEndpoints
         return TypedResults.Created($"/api/conversations/{conversation.Id}", ToDto(conversation));
     }
 
-    // MVP participant rule (no assignee yet; task 06 tightens to owner||assignee):
-    // - owner sees the job conversation;
-    // - a non-owner sees it once they have sent a message;
-    // - an untouched conversation is visible to interested taskers while the job is Open.
+    // Task 06 participant rule: owner or escrow payee (Held/Released). While the job is
+    // still Open the pre-assignment browsing rule stays: a non-owner sees the conversation
+    // once they have sent a message, or while it is untouched by any non-owner.
     private static async Task<Results<Ok<List<ConversationListItemDto>>, UnauthorizedHttpResult>> ListAsync(
         ClaimsPrincipal principal,
         AppDbContext db,
@@ -116,8 +116,11 @@ public static class ChatEndpoints
             .Include(c => c.Job)
             .ThenInclude(j => j.Owner)
             .Where(c => c.Job.OwnerId == userId
-                || c.Messages.Any(m => m.SenderId == userId)
-                || (c.Job.Status == JobStatus.Open && !c.Messages.Any(m => m.SenderId != c.Job.OwnerId)))
+                || db.Escrows.Any(e => e.JobId == c.JobId && e.PayeeId == userId
+                    && (e.Status == EscrowStatus.Held || e.Status == EscrowStatus.Released))
+                || (c.Job.Status == JobStatus.Open
+                    && (c.Messages.Any(m => m.SenderId == userId)
+                        || !c.Messages.Any(m => m.SenderId != c.Job.OwnerId))))
             .ToListAsync(ct);
 
         var rows = new List<(Conversation Conversation, ConversationLastMessageDto? LastMessage, ConversationPeerDto? Peer)>(conversations.Count);
@@ -172,7 +175,7 @@ public static class ChatEndpoints
         return TypedResults.Ok(items);
     }
 
-    // Participant by the send rule: owner or Open job, else 403. 404 for unknown id.
+    // Participant by the send rule: owner or escrow payee; anyone while the job is Open. 404 unknown id.
     private static async Task<Results<Created<MessageDto>, ValidationProblem, NotFound<ErrorResponse>, ProblemHttpResult, UnauthorizedHttpResult>> SendMessageAsync(
         Guid id,
         SendMessageRequest request,
@@ -202,7 +205,7 @@ public static class ChatEndpoints
             return TypedResults.NotFound(new ErrorResponse("Không tìm thấy cuộc trò chuyện."));
         }
 
-        if (!CanParticipate(conversation.Job.OwnerId, conversation.Job.Status, userId.Value))
+        if (!await ChatAccess.CanParticipateAsync(db, conversation.Job.Id, conversation.Job.OwnerId, conversation.Job.Status, userId.Value, ct))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không phải là người tham gia cuộc trò chuyện này.");
         }
@@ -248,7 +251,7 @@ public static class ChatEndpoints
             return TypedResults.NotFound(new ErrorResponse("Không tìm thấy cuộc trò chuyện."));
         }
 
-        if (!CanParticipate(conversation.Job.OwnerId, conversation.Job.Status, userId.Value))
+        if (!await ChatAccess.CanParticipateAsync(db, conversation.Job.Id, conversation.Job.OwnerId, conversation.Job.Status, userId.Value, ct))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "Bạn không phải là người tham gia cuộc trò chuyện này.");
         }
@@ -282,10 +285,6 @@ public static class ChatEndpoints
 
         return TypedResults.Ok(new MessageListResponse(messages, nextCursor));
     }
-
-    // Shared send/join rule until jobs carry an assignee (task 06).
-    private static bool CanParticipate(Guid ownerId, JobStatus status, Guid userId) =>
-        ownerId == userId || status == JobStatus.Open;
 
     private static Guid? GetUserId(ClaimsPrincipal principal)
     {

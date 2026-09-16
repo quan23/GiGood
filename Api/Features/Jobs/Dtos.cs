@@ -1,3 +1,5 @@
+using Api.Features.Escrows;
+
 namespace Api.Features.Jobs;
 
 public sealed record CreateJobRequest(
@@ -39,5 +41,8 @@ public sealed record JobDto(
     DateTime UpdatedAt);
 
 public sealed record JobListResponse(List<JobDto> Jobs, string? NextCursor);
+
+// Task 06 escrow transitions return the updated escrow + the credited/debited wallet balance.
+public sealed record JobEscrowResponse(EscrowDto Escrow, decimal Balance);
 
 public sealed record CategoryDto(string Key, string Label, string Icon);

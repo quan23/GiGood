@@ -76,7 +76,8 @@ public class ChatHub(AppDbContext db) : Hub
         return Clients.OthersInGroup(group).SendAsync("Typing", new { jobId = group, userId, isTyping });
     }
 
-    // Participant rule until jobs carry an assignee (task 06): owner or Open job.
+    // Task 06 participant rule: job owner, escrow payee (Held/Released) or any user
+    // while the job is still Open (pre-assignment browsing rule).
     private async Task<(Job Job, Guid UserId)> ResolveParticipantAsync(string jobId)
     {
         var userId = GetUserId() ?? throw new HubException("Bạn cần đăng nhập để sử dụng trò chuyện.");
@@ -92,7 +93,7 @@ public class ChatHub(AppDbContext db) : Hub
             throw new HubException("Không tìm thấy công việc.");
         }
 
-        if (job.OwnerId != userId && job.Status != JobStatus.Open)
+        if (!await ChatAccess.CanParticipateAsync(db, job.Id, job.OwnerId, job.Status, userId))
         {
             throw new HubException("Bạn không phải là người tham gia công việc này.");
         }

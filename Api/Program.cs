@@ -2,8 +2,10 @@ using System.Text;
 using Api.Data;
 using Api.Features.Auth;
 using Api.Features.Chat;
+using Api.Features.Escrows;
 using Api.Features.Jobs;
 using Api.Features.Upload;
+using Api.Features.Wallet;
 using Api.Hubs;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -97,6 +99,11 @@ builder.Services.AddSingleton<IValidator<CreateConversationRequest>, CreateConve
 builder.Services.AddSingleton<IValidator<SendMessageRequest>, SendMessageRequestValidator>();
 
 // ---------------------------------------------------------------------------
+// Wallet slice (task 06) — FluentValidation rules for the topup stub.
+// ---------------------------------------------------------------------------
+builder.Services.AddSingleton<IValidator<TopUpRequest>, TopUpRequestValidator>();
+
+// ---------------------------------------------------------------------------
 // SignalR (in-box). Hubs are mapped below.
 // ---------------------------------------------------------------------------
 builder.Services.AddSignalR();
@@ -187,6 +194,10 @@ app.MapGet("/health", () => TypedResults.Ok(new
 app.MapMetaEndpoints();
 app.MapJobsEndpoints();
 app.MapUploadEndpoints();
+
+// Task 06: /api/wallet (balance/transactions/topup) + /api/escrows.
+app.MapWalletEndpoints();
+app.MapEscrowsEndpoints();
 
 // Task 01: /api/auth/* + /api/me.
 app.MapAuthEndpoints();
