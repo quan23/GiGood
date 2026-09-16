@@ -40,3 +40,22 @@ public sealed record TaskerProfileDto(List<string> Skills, string Bio, string Av
 public sealed record MeResponse(UserDto User, object? Wallet);
 
 public sealed record ErrorResponse(string Message);
+
+// Task 08: partial profile update — every field is optional, null means "leave unchanged".
+public sealed record UpdateProfileRequest(
+    string? Name,
+    string? Location,
+    string? Bio,
+    List<string>? Skills,
+    string? Availability,
+    string? Vehicle,
+    string? AvatarUrl);
+
+public sealed record SwitchRoleRequest(string? Role);
+
+public sealed record SwitchRoleResponse(string Role);
+
+public sealed record AvatarResponse(string AvatarUrl);
+
+// Task 08: KYC stub — real verification is deferred.
+public sealed record VerifyResponse(bool Verified);

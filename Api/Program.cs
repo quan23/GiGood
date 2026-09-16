@@ -89,6 +89,10 @@ builder.Services.AddSingleton<IValidator<RegisterRequest>, RegisterRequestValida
 builder.Services.AddSingleton<IValidator<LoginRequest>, LoginRequestValidator>();
 builder.Services.AddSingleton<IValidator<TokenRequest>, TokenRequestValidator>();
 
+// Task 08: profile edit + role switch validation.
+builder.Services.AddSingleton<IValidator<UpdateProfileRequest>, UpdateProfileRequestValidator>();
+builder.Services.AddSingleton<IValidator<SwitchRoleRequest>, SwitchRoleRequestValidator>();
+
 // ---------------------------------------------------------------------------
 // Jobs slice (task 02) — FluentValidation rules for create/patch.
 // ---------------------------------------------------------------------------
