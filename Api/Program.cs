@@ -1,9 +1,12 @@
 using System.Text;
 using Api.Data;
 using Api.Features.Auth;
+using Api.Features.Jobs;
+using Api.Features.Upload;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -80,6 +83,12 @@ builder.Services.AddSingleton<IValidator<LoginRequest>, LoginRequestValidator>()
 builder.Services.AddSingleton<IValidator<TokenRequest>, TokenRequestValidator>();
 
 // ---------------------------------------------------------------------------
+// Jobs slice (task 02) — FluentValidation rules for create/patch.
+// ---------------------------------------------------------------------------
+builder.Services.AddSingleton<IValidator<CreateJobRequest>, CreateJobRequestValidator>();
+builder.Services.AddSingleton<IValidator<UpdateJobRequest>, UpdateJobRequestValidator>();
+
+// ---------------------------------------------------------------------------
 // SignalR (in-box). Hubs are mapped in task 04/05.
 // ---------------------------------------------------------------------------
 builder.Services.AddSignalR();
@@ -135,6 +144,9 @@ var app = builder.Build();
 // Dev-only quick-login seed; never blocks startup when the DB is unreachable.
 await app.SeedDevAuthAsync();
 
+// Dev-only categories + demo jobs (task 02); same best-effort contract.
+await app.SeedJobsAsync();
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -143,7 +155,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseStaticFiles(); // wwwroot/uploads (task 02)
+// Uploads land here and are served by UseStaticFiles below. Explicit provider so the
+// folder works even when it did not exist when the host resolved WebRootPath.
+var webRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+Directory.CreateDirectory(Path.Combine(webRoot, "uploads"));
+app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(webRoot) });
 
 app.UseCors(CorsPolicy);
 app.UseAuthentication();
@@ -159,18 +175,10 @@ app.MapGet("/health", () => TypedResults.Ok(new
     time = DateTime.UtcNow,
 }));
 
-var meta = app.MapGroup("/api/meta");
-meta.MapGet("/categories", () => TypedResults.Ok(new[]
-{
-    new { key = "repair", label = "Sửa chữa vặt", icon = "wrench" },
-    new { key = "cleaning", label = "Dọn dẹp nhà cửa", icon = "trash" },
-    new { key = "delivery", label = "Vận chuyển/Giao hàng", icon = "motorcycle" },
-    new { key = "helper", label = "Hỗ trợ/Nhờ việc vặt", icon = "handshake-o" },
-}));
-
-// Guard stub: proves the auth pipeline; real jobs slice lands in task 02.
-app.MapGet("/api/jobs", () => TypedResults.Ok(Array.Empty<object>()))
-    .RequireAuthorization();
+// Task 02: /api/jobs CRUD, /api/upload, /api/meta/categories (DB-backed).
+app.MapMetaEndpoints();
+app.MapJobsEndpoints();
+app.MapUploadEndpoints();
 
 // Task 01: /api/auth/* + /api/me.
 app.MapAuthEndpoints();

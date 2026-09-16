@@ -51,3 +51,8 @@ dist/
 # --- Logs ---
 *.log
 logs/
+
+# --- Local uploads (generated at runtime, keep the folder) ---
+Api/wwwroot/uploads/*
+!Api/wwwroot/uploads/.gitkeep
+/wwwroot/
