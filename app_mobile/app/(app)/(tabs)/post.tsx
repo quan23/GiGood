@@ -4,9 +4,12 @@ import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import { useJobs } from '../../../hooks/useJobs'
+import { useDeviceLocation } from '../../../hooks/useDeviceLocation'
 import { useUi } from '../../../hooks/useUi'
 import { Category } from '../../../types'
 import { CATEGORY_META } from '../../../lib/categories'
+import { JobMap } from '../../../lib/features/jobs/components/JobMap'
+import { Q1_CENTER, type LatLng } from '../../../lib/features/jobs/geo'
 import { getApiErrorMessage } from '../../../lib/features/jobs/api'
 
 const TEMPLATES = [
@@ -21,6 +24,7 @@ const MAX_IMAGES = 5
 export default function PostScreen() {
   const { createJob, uploadImage } = useJobs()
   const { showToast } = useUi()
+  const { position, request: requestDevicePosition } = useDeviceLocation()
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState<Category>('repair')
@@ -30,6 +34,14 @@ export default function PostScreen() {
   const [urgent, setUrgent] = useState(false)
   const [images, setImages] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickedCoords, setPickedCoords] = useState<LatLng | null>(null)
+
+  const toggleLocationPicker = () => {
+    const next = !pickerOpen
+    setPickerOpen(next)
+    if (next) void requestDevicePosition()
+  }
 
   const applyTemplate = (cat: Category, t: string, b: number) => {
     setCategory(cat)
@@ -87,6 +99,8 @@ export default function PostScreen() {
         category,
         price,
         locationText: location.trim(),
+        lat: pickedCoords?.lat,
+        lng: pickedCoords?.lng,
         images: uploaded,
       })
       setTitle('')
@@ -95,6 +109,8 @@ export default function PostScreen() {
       setLocation('')
       setUrgent(false)
       setImages([])
+      setPickedCoords(null)
+      setPickerOpen(false)
       showToast('Đăng việc thành công! Đang tìm Tasker phù hợp...', 'success')
       router.push(`/(app)/job/${job.id}`)
     } catch (error) {
@@ -177,7 +193,15 @@ export default function PostScreen() {
         </View>
 
         <View className="space-y-1.5">
-          <Text className="text-xs font-bold text-gray-700">Địa điểm thực hiện <Text className="text-red-500">*</Text></Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xs font-bold text-gray-700">Địa điểm thực hiện <Text className="text-red-500">*</Text></Text>
+            <TouchableOpacity onPress={toggleLocationPicker} hitSlop={6} className="flex-row items-center">
+              <FontAwesome name="map-o" size={11} color="#0d9488" />
+              <Text className="text-[11px] font-bold text-teal-600 ml-1">
+                {pickerOpen ? 'Ẩn bản đồ' : 'Chọn vị trí'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <View className="relative">
             <View className="absolute left-4 top-0 bottom-0 justify-center z-10">
               <FontAwesome name="map-marker" size={12} color="#9ca3af" />
@@ -185,6 +209,24 @@ export default function PostScreen() {
             <TextInput value={location} onChangeText={setLocation} placeholder="Số nhà, đường, quận..."
               placeholderTextColor="#9ca3af" className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm" />
           </View>
+          {pickerOpen && (
+            <View className="space-y-1.5">
+              <JobMap
+                jobs={[]}
+                center={position ?? Q1_CENTER}
+                userPosition={position}
+                pickMode
+                pickedPoint={pickedCoords}
+                onPick={setPickedCoords}
+                height={160}
+              />
+              <Text className="text-[10px] text-gray-400">
+                {pickedCoords
+                  ? `Toạ độ đã chọn: ${pickedCoords.lat.toFixed(5)}, ${pickedCoords.lng.toFixed(5)}`
+                  : 'Chạm lên bản đồ để ghim vị trí chính xác.'}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View className="space-y-1.5">

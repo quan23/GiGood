@@ -69,6 +69,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasIndex(j => j.Status);
             entity.HasIndex(j => j.Category);
             entity.HasIndex(j => j.CreatedAt);
+            entity.HasIndex(j => new { j.Lat, j.Lng }); // bbox prefilter (task 03)
         });
 
         modelBuilder.Entity<JobImage>(entity =>

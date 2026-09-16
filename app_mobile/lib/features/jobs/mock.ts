@@ -1,4 +1,5 @@
 import { INITIAL_JOBS } from '../../seed'
+import { haversineKm } from './geo'
 import type { Job } from '../../../types'
 import type {
   ApiJobStatus,
@@ -89,7 +90,24 @@ export function mockListJobs(params: JobListParams = {}, viewer: MockViewer = nu
     )
   }
 
-  jobs = [...jobs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const centerLat = params.lat
+  const centerLng = params.lng
+  if (centerLat != null && centerLng != null) {
+    // Mirror the API geo branch: drop jobs without coords, attach `distanceKm`
+    // (rounded to 2 decimals), filter by radius and sort nearest-first.
+    const radiusKm = params.radius ?? 5
+    jobs = jobs
+      .filter(
+        (job): job is JobModel & { lat: number; lng: number } =>
+          job.lat != null && job.lng != null,
+      )
+      .map((job) => ({ ...job, distanceKm: haversineKm({ lat: centerLat, lng: centerLng }, job) }))
+      .filter((job) => (job.distanceKm ?? 0) <= radiusKm)
+      .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
+  } else {
+    jobs = [...jobs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  }
+
   const limit = params.limit ?? 20
   return { jobs: jobs.slice(0, limit), nextCursor: null }
 }

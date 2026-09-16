@@ -46,6 +46,12 @@
         {
           "photosPermission": "GiGood cần truy cập thư viện ảnh để đính kèm ảnh cho công việc."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "GiGood dùng vị trí của bạn để tìm công việc gần đây."
+        }
       ]
     ],
     "experiments": {
