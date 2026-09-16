@@ -1,8 +1,10 @@
 using System.Text;
 using Api.Data;
 using Api.Features.Auth;
+using Api.Features.Chat;
 using Api.Features.Jobs;
 using Api.Features.Upload;
+using Api.Hubs;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -89,7 +91,13 @@ builder.Services.AddSingleton<IValidator<CreateJobRequest>, CreateJobRequestVali
 builder.Services.AddSingleton<IValidator<UpdateJobRequest>, UpdateJobRequestValidator>();
 
 // ---------------------------------------------------------------------------
-// SignalR (in-box). Hubs are mapped in task 04/05.
+// Chat slice (task 04) — FluentValidation rules for create + message body.
+// ---------------------------------------------------------------------------
+builder.Services.AddSingleton<IValidator<CreateConversationRequest>, CreateConversationRequestValidator>();
+builder.Services.AddSingleton<IValidator<SendMessageRequest>, SendMessageRequestValidator>();
+
+// ---------------------------------------------------------------------------
+// SignalR (in-box). Hubs are mapped below.
 // ---------------------------------------------------------------------------
 builder.Services.AddSignalR();
 
@@ -183,7 +191,11 @@ app.MapUploadEndpoints();
 // Task 01: /api/auth/* + /api/me.
 app.MapAuthEndpoints();
 
-// TODO task 04/05: app.MapHub<ChatHub>("/hubs/chat"); app.MapHub<NotificationHub>("/hubs/notifications");
+// Task 04: /api/conversations + realtime ChatHub (token via `access_token` query).
+app.MapChatEndpoints();
+app.MapHub<ChatHub>("/hubs/chat");
+
+// TODO task 05: app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
 

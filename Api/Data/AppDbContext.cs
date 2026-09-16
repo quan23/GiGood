@@ -1,4 +1,5 @@
 using Api.Features.Auth;
+using Api.Features.Chat;
 using Api.Features.Jobs;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,10 +15,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Job> Jobs => Set<Job>();                                      // task 02
     public DbSet<JobImage> JobImages => Set<JobImage>();                       // task 02
 
-    // TODO task 04-07: add remaining DbSets as features land.
+    public DbSet<Conversation> Conversations => Set<Conversation>();           // task 04
+    public DbSet<Message> Messages => Set<Message>();                          // task 04
+
+    // TODO task 05-07: add remaining DbSets as features land.
     // public DbSet<JobApplication> JobApplications => Set<JobApplication>();     // task 02/06
-    // public DbSet<Conversation> Conversations => Set<Conversation>();           // task 04
-    // public DbSet<Message> Messages => Set<Message>();                          // task 04
     // public DbSet<Notification> Notifications => Set<Notification>();           // task 05
     // public DbSet<Wallet> Wallets => Set<Wallet>();                             // task 06
     // public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>(); // task 06
@@ -76,6 +78,36 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             // The same upload cannot repeat on one job.
             entity.HasKey(i => new { i.JobId, i.Url });
+        });
+
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            // One conversation per job — the unique index backs the idempotent POST.
+            entity.HasIndex(c => c.JobId).IsUnique();
+
+            entity.HasOne(c => c.Job)
+                .WithOne()
+                .HasForeignKey<Conversation>(c => c.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.Property(m => m.Body).HasMaxLength(2000);
+
+            // History pages newest-first by (CreatedAt, Id).
+            entity.HasIndex(m => new { m.ConversationId, m.CreatedAt }).IsDescending(false, true);
+
+            entity.HasOne(m => m.Conversation)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(m => m.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(m => m.SenderId);
         });
     }
 }
