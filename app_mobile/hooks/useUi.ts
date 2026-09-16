@@ -24,8 +24,6 @@ export function useUi() {
   return {
     activeSeekerSubTab: state.ui.activeSeekerSubTab,
     activeTaskerSubTab: state.ui.activeTaskerSubTab,
-    notifOpen: state.ui.notifOpen,
-    notifBadge: state.ui.notifBadge,
     matchingJobIdRef: state.ui.matchingJobIdRef,
     toast: state.ui.toast,
     setSeekerSubTab,

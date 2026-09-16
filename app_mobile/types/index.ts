@@ -50,13 +50,6 @@ export type Job = {
   lng: number
 }
 
-export type Notification = {
-  id: number
-  text: string
-  time: string
-  read: boolean
-}
-
 export type ToastState = {
   message: string
   variant: ToastVariant
@@ -76,13 +69,10 @@ export type GiGoodState = {
     activeTaskerSubTab: TaskerSubTab
     activeChatId: number | null
     chatDetailOpen: boolean
-    notifOpen: boolean
-    notifBadge: boolean
     matchingJobIdRef: number | null
     toast: ToastState
   }
   data: {
     jobs: Job[]
-    notifications: Notification[]
   }
 }

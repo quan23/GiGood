@@ -8,19 +8,24 @@ import { useNotifications } from "../../hooks/useNotifications";
 import { useWallet } from "../../hooks/useWallet";
 import { CartProvider } from "../../lib/features/wallet/context/CartContext";
 import { connectChatHub } from "../../lib/features/chat/hub";
+import { connectNotificationHub } from "../../lib/features/notifications/hub";
+import { formatNotificationTime } from "../../lib/features/notifications/format";
 import { formatVnd } from "../../lib/format";
 
 export default function AppLayout() {
   const { profile, currentRole, switchRole } = useAuth();
   const { balance, escrowHeld, isSeeker } = useWallet();
-  const { notifications, clearNotifs, hasUnread } = useNotifications();
+  const { notifications, unreadCount, clear } = useNotifications();
   const [notifOpen, setNotifOpen] = useState(false);
   const router = useRouter();
 
-  // Foreground-only realtime: connect once the session is hydrated. Best effort,
-  // never blocks the shell if the hub is unreachable.
+  // Foreground-only realtime: connect both hubs once the session is hydrated.
+  // Best effort, never blocks the shell if a hub is unreachable.
   useEffect(() => {
-    if (profile) void connectChatHub();
+    if (profile) {
+      void connectChatHub();
+      void connectNotificationHub();
+    }
   }, [profile]);
 
   if (!profile) {
@@ -52,8 +57,12 @@ export default function AppLayout() {
               className="w-9 h-9 rounded-xl bg-stone-50 border border-gray-200 items-center justify-center relative"
             >
               <FontAwesome name="bell" size={14} color="#6b7280" />
-              {hasUnread && (
-                <View className="absolute top-1 right-1.5 w-2 h-2 bg-orange-500 rounded-full" />
+              {unreadCount > 0 && (
+                <View className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-orange-500 rounded-full items-center justify-center">
+                  <Text className="text-white text-[8px] font-bold">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/(app)/profile")}>
@@ -148,11 +157,23 @@ export default function AppLayout() {
               <Text className="font-extrabold text-xs text-gray-800">
                 Thông báo của bạn
               </Text>
-              <TouchableOpacity onPress={clearNotifs}>
-                <Text className="text-[10px] text-orange-500 font-bold">
-                  Xóa hết
-                </Text>
-              </TouchableOpacity>
+              <View className="flex-row items-center space-x-3">
+                <TouchableOpacity
+                  onPress={() => {
+                    setNotifOpen(false);
+                    router.push("/(app)/notifications");
+                  }}
+                >
+                  <Text className="text-[10px] text-gray-400 font-bold">
+                    Xem tất cả
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => void clear()}>
+                  <Text className="text-[10px] text-orange-500 font-bold">
+                    Xóa hết
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <ScrollView style={{ maxHeight: 240 }} className="space-y-2.5">
               {notifications.length === 0 ? (
@@ -165,17 +186,37 @@ export default function AppLayout() {
                     key={n.id}
                     className="flex-row items-start space-x-2.5 pb-2.5 border-b border-gray-50"
                   >
-                    <View className="w-7 h-7 rounded-full bg-orange-50 items-center justify-center">
-                      <FontAwesome name="bell" size={10} color="#ea580c" />
+                    <View
+                      className={`w-7 h-7 rounded-full items-center justify-center ${
+                        n.read ? "bg-stone-100" : "bg-orange-50"
+                      }`}
+                    >
+                      <FontAwesome
+                        name="bell"
+                        size={10}
+                        color={n.read ? "#9ca3af" : "#ea580c"}
+                      />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-xs text-gray-700 leading-snug">
-                        {n.text}
+                      <Text
+                        className={`text-xs leading-snug ${n.read ? "text-gray-500" : "text-gray-800 font-semibold"}`}
+                        numberOfLines={2}
+                      >
+                        {n.title}
+                      </Text>
+                      <Text
+                        className="text-[10px] text-gray-400 mt-0.5"
+                        numberOfLines={2}
+                      >
+                        {n.body}
                       </Text>
                       <Text className="text-[10px] text-gray-400 mt-0.5">
-                        {n.time}
+                        {formatNotificationTime(n.createdAt)}
                       </Text>
                     </View>
+                    {!n.read && (
+                      <View className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5" />
+                    )}
                   </View>
                 ))
               )}

@@ -1,52 +1,105 @@
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { EmptyState } from "../../components/shared/EmptyState";
-import { useGiGood } from "../../lib/GiGoodContext";
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native'
+import { FontAwesome } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { EmptyState } from '../../components/shared/EmptyState'
+import { LoadingSpinner } from '../../components/shared/LoadingSpinner'
+import { NotificationTile } from '../../components/ui/NotificationTile'
+import { useNotifications } from '../../hooks/useNotifications'
+import type { AppNotification } from '../../lib/features/notifications/types'
 
 export default function NotificationsScreen() {
-  const { state, dispatch } = useGiGood();
-  const notifs = state.data.notifications;
+  const router = useRouter()
+  const {
+    notifications,
+    unreadCount,
+    markRead,
+    clear,
+    loading,
+    refreshing,
+    refetch,
+    hasMore,
+    loadingMore,
+    loadMore,
+  } = useNotifications()
 
-  const markAllRead = () => {
-    dispatch({ type: "SET_NOTIF_BADGE", payload: false });
-  };
+  const openNotification = (item: AppNotification) => {
+    if (!item.read) void markRead([item.id])
+    if (item.jobId) router.push(`/(app)/job/${item.jobId}`)
+  }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="flex-row justify-between items-center px-4 pt-4 pb-2">
-        <Text className="text-xl font-bold text-gray-800">Thông báo</Text>
-        {notifs.length > 0 && (
-          <TouchableOpacity onPress={markAllRead}>
-            <Text className="text-green-600 text-sm font-semibold">Đã đọc tất cả</Text>
-          </TouchableOpacity>
+    <SafeAreaView className="flex-1 bg-stone-50">
+      <View className="bg-white border-b border-gray-200 px-4 py-3 flex-row items-center">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center"
+        >
+          <FontAwesome name="arrow-left" size={14} color="#6b7280" />
+        </TouchableOpacity>
+        <Text className="font-bold text-base text-gray-800 ml-3 flex-1">Thông báo</Text>
+        {unreadCount > 0 && (
+          <View className="bg-orange-50 border border-orange-200 rounded-full px-2.5 py-1">
+            <Text className="text-[10px] font-bold text-orange-500">{unreadCount} chưa đọc</Text>
+          </View>
         )}
       </View>
-      {notifs.length === 0 ? (
-        <EmptyState
-          icon="🔔"
-          title="Không có thông báo"
-          subtitle="Bạn sẽ nhận thông báo khi có việc mới"
-        />
+
+      {notifications.length > 0 && (
+        <View className="flex-row items-center justify-between px-4 py-2.5 bg-white border-b border-gray-100">
+          <Text className="text-[10px] text-gray-400">Mới nhất trước</Text>
+          <View className="flex-row items-center space-x-4">
+            <TouchableOpacity onPress={() => void markRead()} disabled={unreadCount === 0}>
+              <Text
+                className={`text-[11px] font-bold ${unreadCount === 0 ? 'text-gray-300' : 'text-teal-600'}`}
+              >
+                Đánh dấu đã đọc tất cả
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => void clear()}>
+              <Text className="text-[11px] font-bold text-orange-500">Xoá tất cả</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {loading ? (
+        <LoadingSpinner text="Đang tải thông báo..." />
       ) : (
         <FlatList
-          data={notifs}
-          keyExtractor={item => item.id.toString()}
-          contentContainerClassName="p-4 pt-0"
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          className="flex-1"
+          contentContainerClassName="p-4"
+          refreshing={refreshing}
+          onRefresh={() => void refetch()}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => dispatch({ type: 'MARK_NOTIF_READ', payload: item.id })}
-              className="rounded-xl p-4 mb-2 bg-white"
-              style={item.read ? undefined : { backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0' }}>
-              <View className="flex-row justify-between">
-                <Text className={`flex-1 ${item.read ? "text-gray-600" : "text-gray-800 font-medium"}`}>
-                  {item.text}
-                </Text>
-                {!item.read && <View className="w-2 h-2 rounded-full bg-green-600 mt-2" />}
-              </View>
-              <Text className="text-xs text-gray-400 mt-1">{item.time}</Text>
-            </TouchableOpacity>
+            <NotificationTile notification={item} onPress={() => openNotification(item)} />
           )}
+          ListEmptyComponent={
+            <EmptyState
+              icon="🔔"
+              title="Không có thông báo"
+              subtitle="Bạn sẽ nhận thông báo khi có việc mới"
+            />
+          }
+          ListFooterComponent={
+            hasMore ? (
+              <TouchableOpacity
+                onPress={() => void loadMore()}
+                disabled={loadingMore}
+                className="py-3 items-center"
+              >
+                {loadingMore ? (
+                  <ActivityIndicator size="small" color="#9ca3af" />
+                ) : (
+                  <Text className="text-xs text-gray-400">Tải thêm thông báo</Text>
+                )}
+              </TouchableOpacity>
+            ) : null
+          }
         />
       )}
     </SafeAreaView>
-  );
+  )
 }

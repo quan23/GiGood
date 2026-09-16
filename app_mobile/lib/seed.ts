@@ -63,14 +63,11 @@ export function createInitialState(): GiGoodState {
       activeTaskerSubTab: 'board',
       activeChatId: null,
       chatDetailOpen: false,
-      notifOpen: false,
-      notifBadge: false,
       matchingJobIdRef: null,
       toast: null,
     },
     data: {
       jobs: INITIAL_JOBS,
-      notifications: [],
     },
   }
 }

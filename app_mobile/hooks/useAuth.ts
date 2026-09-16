@@ -5,6 +5,7 @@ import * as authApi from '../lib/features/auth/api'
 import { toUserProfile } from '../lib/features/auth/types'
 import type { AuthUserDto, TokenPair } from '../lib/features/auth/types'
 import { disconnectChatHub } from '../lib/features/chat/hub'
+import { disconnectNotificationHub } from '../lib/features/notifications/hub'
 import {
   clearTokens,
   getAccessToken,
@@ -104,6 +105,7 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     await disconnectChatHub()
+    await disconnectNotificationHub()
     const refreshToken = await getRefreshToken().catch(() => null)
     if (refreshToken) {
       await authApi.revoke(refreshToken).catch(() => undefined)

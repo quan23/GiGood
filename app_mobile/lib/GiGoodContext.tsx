@@ -43,7 +43,6 @@ type Action =
       type: "SET_TEMP_SIGNUP_INFO";
       payload: { name: string; phone: string; location: string; password: string } | null;
     }
-  | { type: "MARK_NOTIF_READ"; payload: number }
   | {
       type: "SET_SEEKER_SUB_TAB";
       payload: "post" | "jobs" | "chat" | "history";
@@ -80,9 +79,6 @@ type Action =
     }
   | { type: "SET_ACTIVE_CHAT"; payload: number | null }
   | { type: "SET_CHAT_DETAIL"; payload: boolean }
-  | { type: "PUSH_NOTIF"; payload: { text: string; time?: string } }
-  | { type: "CLEAR_NOTIFS" }
-  | { type: "SET_NOTIF_BADGE"; payload: boolean }
   | { type: "SHOW_TOAST"; payload: { message: string; variant: ToastVariant } }
   | { type: "HIDE_TOAST" };
 
@@ -109,17 +105,6 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
       return {
         ...state,
         auth: { ...state.auth, profile, currentRole: "seeker" },
-        data: {
-          ...state.data,
-          notifications: [
-            {
-              id: Date.now(),
-              text: `Chào mừng ${action.payload.name} đến với GiGood!`,
-              time: "Vừa xong",
-              read: false,
-            },
-          ],
-        },
       };
     }
 
@@ -136,17 +121,6 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
       return {
         ...state,
         auth: { ...state.auth, profile, currentRole: "tasker" },
-        data: {
-          ...state.data,
-          notifications: [
-            {
-              id: Date.now(),
-              text: `Chào mừng ${action.payload.name} đến với GiGood!`,
-              time: "Vừa xong",
-              read: false,
-            },
-          ],
-        },
       };
     }
 
@@ -182,17 +156,6 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
       return {
         ...state,
         auth: { ...state.auth, profile, currentRole: action.payload },
-        data: {
-          ...state.data,
-          notifications: [
-            {
-              id: Date.now(),
-              text: `Chào mừng ${profile.name} đến với GiGood!`,
-              time: "Vừa xong",
-              read: false,
-            },
-          ],
-        },
       };
     }
 
@@ -217,16 +180,6 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
         ...state,
         auth: { ...state.auth, hydrated: action.payload },
       };
-
-    case "MARK_NOTIF_READ": {
-      const updatedNotifs = state.data.notifications.map((n) =>
-        n.id === action.payload ? { ...n, read: true } : n,
-      );
-      return {
-        ...state,
-        data: { ...state.data, notifications: updatedNotifs },
-      };
-    }
 
     case "SIGN_OUT":
       return {
@@ -434,34 +387,6 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
 
     case "SET_CHAT_DETAIL":
       return { ...state, ui: { ...state.ui, chatDetailOpen: action.payload } };
-
-    case "PUSH_NOTIF":
-      return {
-        ...state,
-        data: {
-          ...state.data,
-          notifications: [
-            {
-              id: Date.now(),
-              text: action.payload.text,
-              time: action.payload.time || "Vừa xong",
-              read: false,
-            },
-            ...state.data.notifications,
-          ],
-        },
-        ui: { ...state.ui, notifBadge: true },
-      };
-
-    case "CLEAR_NOTIFS":
-      return {
-        ...state,
-        data: { ...state.data, notifications: [] },
-        ui: { ...state.ui, notifBadge: false },
-      };
-
-    case "SET_NOTIF_BADGE":
-      return { ...state, ui: { ...state.ui, notifBadge: action.payload } };
 
     case "SHOW_TOAST":
       return {
