@@ -71,9 +71,6 @@ export function createInitialState(): GiGoodState {
     data: {
       jobs: INITIAL_JOBS,
       notifications: [],
-      seekerWallet: 1420000,
-      taskerWallet: 2850000,
-      escrowHeldPool: 150000,
     },
   }
 }

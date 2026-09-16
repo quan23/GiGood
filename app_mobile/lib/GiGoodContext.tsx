@@ -319,8 +319,6 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
         data: {
           ...state.data,
           jobs: updatedJobs,
-          seekerWallet: state.data.seekerWallet - job.budget,
-          escrowHeldPool: state.data.escrowHeldPool + job.budget,
         },
         ui: {
           ...state.ui,
@@ -358,8 +356,6 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
         data: {
           ...state.data,
           jobs: updatedJobs,
-          seekerWallet: state.data.seekerWallet - acceptJob.budget,
-          escrowHeldPool: state.data.escrowHeldPool + acceptJob.budget,
         },
         ui: {
           ...state.ui,
@@ -399,8 +395,6 @@ function reducer(state: GiGoodState, action: Action): GiGoodState {
         data: {
           ...state.data,
           jobs: updatedJobs,
-          escrowHeldPool: state.data.escrowHeldPool - releaseJob.budget,
-          taskerWallet: state.data.taskerWallet + releaseJob.budget,
         },
       };
     }

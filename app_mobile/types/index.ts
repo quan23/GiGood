@@ -84,8 +84,5 @@ export type GiGoodState = {
   data: {
     jobs: Job[]
     notifications: Notification[]
-    seekerWallet: number
-    taskerWallet: number
-    escrowHeldPool: number
   }
 }

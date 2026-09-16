@@ -6,12 +6,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useWallet } from "../../hooks/useWallet";
+import { CartProvider } from "../../lib/features/wallet/context/CartContext";
 import { connectChatHub } from "../../lib/features/chat/hub";
 import { formatVnd } from "../../lib/format";
 
 export default function AppLayout() {
   const { profile, currentRole, switchRole } = useAuth();
-  const { wallet, escrowHeldPool, isSeeker } = useWallet();
+  const { balance, escrowHeld, isSeeker } = useWallet();
   const { notifications, clearNotifs, hasUnread } = useNotifications();
   const [notifOpen, setNotifOpen] = useState(false);
   const router = useRouter();
@@ -29,7 +30,8 @@ export default function AppLayout() {
   const toggleNotif = () => setNotifOpen(!notifOpen);
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-50">
+    <CartProvider>
+      <SafeAreaView className="flex-1 bg-stone-50">
       {/* Sticky Header */}
       <View className="bg-white border-b border-gray-200 px-4 pb-3 relative z-30">
         {/* Top row */}
@@ -122,7 +124,7 @@ export default function AppLayout() {
                 Ký quỹ an toàn
               </Text>
               <Text className="text-[11px] text-teal-600 font-extrabold">
-                {formatVnd(escrowHeldPool)}
+                {formatVnd(escrowHeld)}
               </Text>
             </View>
           </View>
@@ -133,7 +135,7 @@ export default function AppLayout() {
                 Ví của {profile.name.split(" ").pop()}
               </Text>
               <Text className="text-[11px] text-gray-900 font-extrabold">
-                {formatVnd(wallet)}
+                {formatVnd(balance)}
               </Text>
             </View>
           </View>
@@ -193,6 +195,7 @@ export default function AppLayout() {
         <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="job/[id]" options={{ headerShown: false }} />
       </Stack>
-    </SafeAreaView>
+      </SafeAreaView>
+    </CartProvider>
   );
 }

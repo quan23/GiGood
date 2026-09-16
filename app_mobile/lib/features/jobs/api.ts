@@ -2,6 +2,7 @@ import type { AxiosError } from 'axios'
 import apiClient from '../../core/api/client'
 import type {
   CreateJobBody,
+  JobEscrowResponse,
   JobListParams,
   JobListResponse,
   JobModel,
@@ -33,6 +34,37 @@ export async function updateJob(id: string, body: UpdateJobBody): Promise<JobMod
 
 export async function deleteJob(id: string): Promise<void> {
   await apiClient.delete(`/api/jobs/${id}`)
+}
+
+// --- task 06 escrow lifecycle -------------------------------------------------
+
+/** `POST /api/jobs/{id}/accept` (tasker, not owner) -> held escrow + payer balance. */
+export async function acceptJob(id: string): Promise<JobEscrowResponse> {
+  const { data } = await apiClient.post<JobEscrowResponse>(`/api/jobs/${id}/accept`)
+  return data
+}
+
+/** `POST /api/jobs/{id}/report` (assigned tasker) -> 204. */
+export async function reportJob(id: string): Promise<void> {
+  await apiClient.post(`/api/jobs/${id}/report`)
+}
+
+/** `POST /api/jobs/{id}/release-escrow` (owner, Held) -> Released + payee credited. */
+export async function releaseEscrow(id: string): Promise<JobEscrowResponse> {
+  const { data } = await apiClient.post<JobEscrowResponse>(`/api/jobs/${id}/release-escrow`)
+  return data
+}
+
+/** `POST /api/jobs/{id}/cancel` (owner) -> refunds Held escrow, or 204 when Open without escrow. */
+export async function cancelJob(id: string): Promise<JobEscrowResponse | null> {
+  const { data, status } = await apiClient.post<JobEscrowResponse>(`/api/jobs/${id}/cancel`)
+  return status === 204 ? null : data
+}
+
+/** `POST /api/jobs/{id}/refund` (assigned tasker abandons) -> job back to Open. */
+export async function refundJob(id: string): Promise<JobEscrowResponse> {
+  const { data } = await apiClient.post<JobEscrowResponse>(`/api/jobs/${id}/refund`)
+  return data
 }
 
 /**

@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FlatList, RefreshControl, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native'
+import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAuth } from '../../../hooks/useAuth'
 import { useDeviceLocation } from '../../../hooks/useDeviceLocation'
 import { useJobs } from '../../../hooks/useJobs'
+import { useUi } from '../../../hooks/useUi'
 import { JobCard } from '../../../components/ui/JobCard'
 import { EmptyState } from '../../../components/shared/EmptyState'
 import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
 import { JobMap } from '../../../lib/features/jobs/components/JobMap'
 import { DEFAULT_RADIUS_KM, Q1_CENTER } from '../../../lib/features/jobs/geo'
+import { getApiErrorMessage } from '../../../lib/features/jobs/api'
+import { useCart } from '../../../lib/features/wallet/context/CartContext'
 import type { JobModel } from '../../../lib/features/jobs/types'
 
 export default function BoardScreen() {
@@ -16,8 +20,12 @@ export default function BoardScreen() {
   const { position, request } = useDeviceLocation()
   const center = position ?? Q1_CENTER
   const router = useRouter()
+  const { showToast } = useUi()
   const listRef = useRef<FlatList<JobModel>>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [checkingOut, setCheckingOut] = useState(false)
+  const { count, has, toggle, clear } = useCart()
 
   // GPS is best-effort: the map/list start on the Q1 center and recenter
   // (refetch by query key) as soon as the device position resolves.
@@ -34,7 +42,14 @@ export default function BoardScreen() {
     }),
     [center.lat, center.lng],
   )
-  const { jobs, loading, refreshing, refetch } = useJobs(params)
+  const {
+    jobs,
+    loading,
+    refreshing,
+    refetch,
+    acceptJob,
+    releaseEscrow,
+  } = useJobs(params)
 
   const handleSelectJob = useCallback(
     (id: string) => {
@@ -46,67 +61,179 @@ export default function BoardScreen() {
     [jobs],
   )
 
+  const exitSelection = useCallback(() => {
+    clear()
+    setSelectionMode(false)
+  }, [clear])
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      // Toggling off the last selected card leaves selection mode.
+      if (selectionMode) {
+        if (has(id) && count === 1) {
+          exitSelection()
+          return
+        }
+        toggle(id)
+        return
+      }
+      setSelectionMode(true)
+      toggle(id)
+    },
+    [selectionMode, has, count, exitSelection, toggle],
+  )
+
+  // Board checkout: release escrows for jobs the caller owns (already reported)
+  // and accept the Open jobs the caller does not own, one by one.
+  const handleCheckout = useCallback(async () => {
+    if (!profile || checkingOut) return
+    const selectedJobs = jobs.filter((job) => has(job.id))
+    if (selectedJobs.length === 0) return
+
+    setCheckingOut(true)
+    let accepted = 0
+    let released = 0
+    let skipped = 0
+    const failures: string[] = []
+
+    for (const job of selectedJobs) {
+      try {
+        if (job.owner.id === profile.id) {
+          if (job.isCompletedReported) {
+            await releaseEscrow(job.id)
+            released += 1
+          } else {
+            skipped += 1
+          }
+        } else if (job.status === 'Open') {
+          await acceptJob(job.id)
+          accepted += 1
+        } else {
+          skipped += 1
+        }
+      } catch (error) {
+        failures.push(getApiErrorMessage(error, `Không xử lý được "${job.title}".`))
+      }
+    }
+
+    setCheckingOut(false)
+    exitSelection()
+
+    if (failures.length > 0) {
+      const done = accepted + released
+      showToast(
+        done > 0
+          ? `Đã xử lý ${done} việc, ${failures.length} việc lỗi: ${failures[0]}`
+          : failures[0],
+        'error',
+      )
+      return
+    }
+
+    const parts = [`Đã nhận ${accepted} việc`]
+    if (released > 0) parts.push(`giải ngân ${released} việc`)
+    if (skipped > 0) parts.push(`bỏ qua ${skipped} việc`)
+    showToast(`${parts.join(', ')}.`, 'success')
+  }, [acceptJob, checkingOut, exitSelection, has, jobs, profile, releaseEscrow, showToast])
+
   if (loading) {
     return <LoadingSpinner text="Đang tải việc gần bạn..." />
   }
 
   return (
-    <FlatList
-      ref={listRef}
-      className="flex-1"
-      contentContainerClassName="pt-4 pb-6 grow"
-      data={jobs}
-      keyExtractor={(item) => item.id}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor="#0f766e" />
-      }
-      onScrollToIndexFailed={(info) =>
-        listRef.current?.scrollToOffset({
-          offset: info.averageItemLength * info.index,
-          animated: true,
-        })
-      }
-      ListHeaderComponent={
-        <View className="px-4">
-          <View className="mb-4">
-            <Text className="text-lg font-extrabold text-gray-800">Việc gần bạn</Text>
-            <Text className="text-xs text-gray-500">
-              Gợi ý theo vị trí GPS & kỹ năng phù hợp với hồ sơ của bạn
-            </Text>
-          </View>
+    <View className="flex-1">
+      <FlatList
+        ref={listRef}
+        className="flex-1"
+        contentContainerClassName={`pt-4 grow ${selectionMode ? 'pb-28' : 'pb-6'}`}
+        data={jobs}
+        keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor="#0f766e" />
+        }
+        onScrollToIndexFailed={(info) =>
+          listRef.current?.scrollToOffset({
+            offset: info.averageItemLength * info.index,
+            animated: true,
+          })
+        }
+        ListHeaderComponent={
+          <View className="px-4">
+            <View className="mb-4">
+              <Text className="text-lg font-extrabold text-gray-800">Việc gần bạn</Text>
+              <Text className="text-xs text-gray-500">
+                Gợi ý theo vị trí GPS & kỹ năng phù hợp với hồ sơ của bạn
+              </Text>
+            </View>
 
-          <JobMap
-            jobs={jobs}
-            center={center}
-            userPosition={position}
-            selectedId={selectedId}
-            currentUserId={profile?.id}
-            onSelectJob={handleSelectJob}
+            <JobMap
+              jobs={jobs}
+              center={center}
+              userPosition={position}
+              selectedId={selectedId}
+              currentUserId={profile?.id}
+              onSelectJob={handleSelectJob}
+            />
+
+            <View className="flex-row items-center justify-between mb-2 mt-4">
+              <Text className="font-bold text-sm text-gray-800">Danh sách việc khả dụng</Text>
+              <Text className="text-[11px] text-gray-400">
+                {selectionMode ? 'Chạm để chọn nhiều việc' : `${jobs.length} việc`}
+              </Text>
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="🗺️"
+            title="Chưa có việc nào gần bạn"
+            subtitle="Hãy quay lại sau hoặc làm mới danh sách."
           />
+        }
+        renderItem={({ item }) => (
+          <JobCard
+            job={item}
+            selected={selectionMode ? has(item.id) : item.id === selectedId}
+            onLongPress={() => handleToggle(item.id)}
+            onPress={() => {
+              if (selectionMode) {
+                handleToggle(item.id)
+                return
+              }
+              setSelectedId(item.id)
+              router.push(`/(app)/job/${item.id}`)
+            }}
+          />
+        )}
+      />
 
-          <View className="flex-row items-center justify-between mb-2 mt-4">
-            <Text className="font-bold text-sm text-gray-800">Danh sách việc khả dụng</Text>
-            <Text className="text-[11px] text-gray-400">{jobs.length} việc</Text>
+      {selectionMode && (
+        <View className="absolute bottom-4 left-4 right-4 bg-gray-900 rounded-2xl px-4 py-3 flex-row items-center shadow-lg">
+          <View className="flex-row items-center space-x-2 flex-1">
+            <FontAwesome name="check-square-o" size={14} color="#fdba74" />
+            <Text className="text-white text-xs font-bold">Đã chọn {count}</Text>
           </View>
+          <TouchableOpacity onPress={exitSelection} className="px-3 py-2 rounded-xl mr-1">
+            <Text className="text-gray-300 text-xs font-bold">Huỷ</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => void handleCheckout()}
+            disabled={count === 0 || checkingOut}
+            className={`bg-orange-500 px-4 py-2 rounded-xl flex-row items-center ${
+              count === 0 || checkingOut ? 'opacity-60' : ''
+            }`}
+          >
+            {checkingOut ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <>
+                <FontAwesome name="bolt" size={11} color="white" />
+                <Text className="text-white text-xs font-bold ml-1.5">Xác nhận</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
-      }
-      ListEmptyComponent={
-        <EmptyState
-          icon="🗺️"
-          title="Chưa có việc nào gần bạn"
-          subtitle="Hãy quay lại sau hoặc làm mới danh sách."
-        />
-      }
-      renderItem={({ item }) => (
-        <JobCard
-          job={item}
-          selected={item.id === selectedId}
-          onPress={() => {
-            setSelectedId(item.id)
-            router.push(`/(app)/job/${item.id}`)
-          }}
-        />
       )}
-    />
+    </View>
   )
 }

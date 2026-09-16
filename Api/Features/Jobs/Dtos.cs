@@ -32,6 +32,7 @@ public sealed record JobDto(
     string Category,
     decimal Price,
     string Status,
+    bool IsCompletedReported,
     double? Lat,
     double? Lng,
     double? DistanceKm,

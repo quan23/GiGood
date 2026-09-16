@@ -9,7 +9,7 @@ import { formatVnd } from "../../lib/format";
 
 export default function ProfileScreen() {
   const { profile, currentRole, signOut } = useAuth();
-  const { wallet, escrowHeldPool } = useWallet();
+  const { balance, escrowHeld } = useWallet();
   const router = useRouter();
 
   if (!profile) {
@@ -66,13 +66,13 @@ export default function ProfileScreen() {
           <View className="flex-1 bg-stone-50 border border-gray-200 rounded-2xl p-3 items-center">
             <Text className="text-[10px] text-gray-500">Ví của bạn</Text>
             <Text className="text-sm font-extrabold text-gray-800">
-              {formatVnd(wallet)}
+              {formatVnd(balance)}
             </Text>
           </View>
           <View className="flex-1 bg-teal-50 border border-teal-200 rounded-2xl p-3 items-center">
             <Text className="text-[10px] text-gray-500">Ký quỹ</Text>
             <Text className="text-sm font-extrabold text-teal-600">
-              {formatVnd(escrowHeldPool)}
+              {formatVnd(escrowHeld)}
             </Text>
           </View>
         </View>

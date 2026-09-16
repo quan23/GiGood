@@ -8,18 +8,20 @@ import { StatusBadge } from "./StatusBadge";
 interface Props {
   job: JobModel;
   onPress?: () => void;
+  onLongPress?: () => void;
   selected?: boolean;
   showActions?: boolean;
   actionLabel?: string;
   onAction?: () => void;
 }
 
-export function JobCard({ job, onPress, selected, showActions, actionLabel, onAction }: Props) {
+export function JobCard({ job, onPress, onLongPress, selected, showActions, actionLabel, onAction }: Props) {
   const meta = CATEGORY_META[job.category]
 
   return (
     <TouchableOpacity
       onPress={onPress}
+      onLongPress={onLongPress}
       className={`bg-white rounded-2xl p-4 mx-4 mb-3 shadow-sm border ${
         selected ? "border-teal-500" : "border-gray-100"
       }`}

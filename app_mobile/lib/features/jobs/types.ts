@@ -1,4 +1,5 @@
 import type { Category } from '../../../types'
+import type { Escrow } from '../wallet/types'
 
 /** Server status enum (`Api/Features/Jobs/Job.cs`): Open | Assigned | Done | Cancelled. */
 export type ApiJobStatus = 'Open' | 'Assigned' | 'Done' | 'Cancelled'
@@ -19,6 +20,7 @@ export type JobModel = {
   category: Category
   price: number
   status: ApiJobStatus
+  isCompletedReported: boolean
   lat: number | null
   lng: number | null
   /** Only set when the list is queried with `lat`/`lng`. */
@@ -43,6 +45,8 @@ export type JobListParams = {
   q?: string
   cursor?: string
   limit?: number
+  /** `mine=true` -> owner's jobs + jobs where the caller is the accepted payee. */
+  mine?: boolean
 }
 
 export type CreateJobBody = {
@@ -68,6 +72,12 @@ export type UpdateJobBody = {
 
 export type UploadResponse = {
   url: string
+}
+
+/** Task 06 escrow transitions return the updated escrow + credited/debited balance. */
+export type JobEscrowResponse = {
+  escrow: Escrow
+  balance: number
 }
 
 /** `GET /api/meta/categories` (public). */

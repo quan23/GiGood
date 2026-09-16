@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useJob, useJobs } from '../../../hooks/useJobs'
 import { useChat } from '../../../hooks/useChat'
+import { useJobEscrow } from '../../../hooks/useWallet'
 import { useAuth } from '../../../hooks/useAuth'
 import { useUi } from '../../../hooks/useUi'
 import { formatVnd } from '../../../lib/format'
@@ -36,8 +37,24 @@ export default function JobDetailScreen() {
   const { profile } = useAuth()
   const { showToast } = useUi()
   const { job, loading } = useJob(jobId)
-  const { updateJob, deleteJob, isUpdating, isDeleting } = useJobs()
+  const {
+    updateJob,
+    deleteJob,
+    acceptJob,
+    reportJob,
+    releaseEscrow,
+    cancelJob,
+    refundJob,
+    isUpdating,
+    isDeleting,
+    isAccepting,
+    isReporting,
+    isReleasing,
+    isCancelling,
+    isRefunding,
+  } = useJobs()
   const { openConversation, isOpening } = useChat()
+  const { escrow } = useJobEscrow(jobId)
 
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState('')
@@ -47,6 +64,11 @@ export default function JobDetailScreen() {
   const [location, setLocation] = useState('')
 
   const isOwner = !!job && !!profile && job.owner.id === profile.id
+  const isOpen = job?.status === 'Open'
+  const heldEscrow = escrow && escrow.status === 'Held' ? escrow : null
+  const isPayer = !!heldEscrow && heldEscrow.payerId === profile?.id
+  const isPayee = !!heldEscrow && heldEscrow.payeeId === profile?.id
+  const reported = job?.isCompletedReported ?? false
 
   const startEdit = () => {
     if (!job) return
@@ -123,6 +145,117 @@ export default function JobDetailScreen() {
       [
         { text: 'Huỷ', style: 'cancel' },
         { text: 'Xoá', style: 'destructive', onPress: () => void confirmDelete() },
+      ],
+    )
+  }
+
+  // --- task 06 escrow lifecycle ------------------------------------------------
+
+  const confirmAccept = async () => {
+    if (!job || isAccepting) return
+    try {
+      const result = await acceptJob(job.id)
+      showToast(`Đã nhận việc! ${formatVnd(result.escrow.amount)} đã được ký quỹ an toàn.`, 'success')
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Không thể nhận việc.'), 'error')
+    }
+  }
+
+  const handleAccept = () => {
+    if (!job || isAccepting) return
+    Alert.alert(
+      'Nhận việc',
+      `Bạn muốn nhận "${job.title}" với mức giá ${formatVnd(job.price)}? Số tiền sẽ được giữ ký quỹ đến khi hoàn thành.`,
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        { text: 'Nhận việc', onPress: () => void confirmAccept() },
+      ],
+    )
+  }
+
+  const confirmReport = async () => {
+    if (!job || isReporting) return
+    try {
+      await reportJob(job.id)
+      showToast('Đã báo hoàn thành! Đang chờ khách xác nhận và giải ngân.', 'success')
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Không thể báo hoàn thành.'), 'error')
+    }
+  }
+
+  const handleReport = () => {
+    if (!job || isReporting) return
+    Alert.alert('Báo hoàn thành', `Xác nhận bạn đã hoàn thành "${job.title}"?`, [
+      { text: 'Huỷ', style: 'cancel' },
+      { text: 'Xác nhận', onPress: () => void confirmReport() },
+    ])
+  }
+
+  const confirmRelease = async () => {
+    if (!job || isReleasing) return
+    try {
+      await releaseEscrow(job.id)
+      showToast('Đã giải ngân cho người nhận việc.', 'success')
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Không thể giải ngân.'), 'error')
+    }
+  }
+
+  const handleRelease = () => {
+    if (!job || isReleasing) return
+    Alert.alert(
+      'Xác nhận & Giải ngân',
+      `Giải ngân ${formatVnd(job.price)} cho người nhận việc của "${job.title}"?`,
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        { text: 'Giải ngân', onPress: () => void confirmRelease() },
+      ],
+    )
+  }
+
+  const confirmCancel = async () => {
+    if (!job || isCancelling) return
+    try {
+      const result = await cancelJob(job.id)
+      showToast(
+        result ? 'Đã huỷ việc và hoàn tiền ký quỹ về ví bạn.' : 'Đã huỷ việc.',
+        'success',
+      )
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Không thể huỷ việc.'), 'error')
+    }
+  }
+
+  const handleCancel = () => {
+    if (!job || isCancelling) return
+    Alert.alert(
+      'Huỷ việc',
+      'Bạn chắc chắn muốn huỷ công việc này? Khoản ký quỹ (nếu có) sẽ được hoàn về ví bạn.',
+      [
+        { text: 'Không', style: 'cancel' },
+        { text: 'Huỷ việc', style: 'destructive', onPress: () => void confirmCancel() },
+      ],
+    )
+  }
+
+  const confirmRefund = async () => {
+    if (!job || isRefunding) return
+    try {
+      await refundJob(job.id)
+      showToast('Đã huỷ nhận việc. Công việc trở lại bảng việc cho Tasker khác.', 'success')
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Không thể huỷ nhận việc.'), 'error')
+    }
+  }
+
+  const handleRefund = () => {
+    if (!job || isRefunding) return
+    Alert.alert(
+      'Huỷ nhận việc',
+      'Bạn muốn trả lại việc này? Khoản ký quỹ sẽ được hoàn về ví người đăng.',
+      [
+        { text: 'Không', style: 'cancel' },
+        { text: 'Huỷ nhận việc', style: 'destructive', onPress: () => void confirmRefund() },
       ],
     )
   }
@@ -306,7 +439,83 @@ export default function JobDetailScreen() {
               )}
             </TouchableOpacity>
 
-            {isOwner && (
+            {/* Task 06 escrow actions */}
+            {!isOwner && isOpen && (
+              <TouchableOpacity onPress={handleAccept} disabled={isAccepting}
+                className={`bg-teal-600 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isAccepting ? 'opacity-60' : ''}`}>
+                {isAccepting ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <FontAwesome name="hand-paper-o" size={14} color="white" />
+                    <Text className="text-white text-sm font-bold">Nhận việc</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {isPayee && (
+              <>
+                {reported ? (
+                  <Text className="w-full text-center text-[11px] font-bold text-amber-600 bg-amber-50 py-2.5 rounded-2xl">
+                    Đã báo hoàn thành — đang chờ khách xác nhận
+                  </Text>
+                ) : (
+                  <TouchableOpacity onPress={handleReport} disabled={isReporting}
+                    className={`bg-orange-500 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isReporting ? 'opacity-60' : ''}`}>
+                    {isReporting ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <>
+                        <FontAwesome name="check-circle" size={14} color="white" />
+                        <Text className="text-white text-sm font-bold">Báo đã hoàn thành</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={handleRefund} disabled={isRefunding}
+                  className={`bg-red-50 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isRefunding ? 'opacity-60' : ''}`}>
+                  {isRefunding ? (
+                    <ActivityIndicator color="#ef4444" />
+                  ) : (
+                    <>
+                      <FontAwesome name="undo" size={12} color="#ef4444" />
+                      <Text className="text-red-500 text-sm font-bold">Huỷ nhận việc</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+
+            {isOwner && (isOpen || (job.status === 'Assigned' && !job.isCompletedReported)) && (
+              <TouchableOpacity onPress={handleCancel} disabled={isCancelling}
+                className={`bg-red-50 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isCancelling ? 'opacity-60' : ''}`}>
+                {isCancelling ? (
+                  <ActivityIndicator color="#ef4444" />
+                ) : (
+                  <>
+                    <FontAwesome name="ban" size={12} color="#ef4444" />
+                    <Text className="text-red-500 text-sm font-bold">Huỷ việc</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {isOwner && job.status === 'Assigned' && job.isCompletedReported && isPayer && (
+              <TouchableOpacity onPress={handleRelease} disabled={isReleasing}
+                className={`bg-emerald-600 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isReleasing ? 'opacity-60' : ''}`}>
+                {isReleasing ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <FontAwesome name="shield" size={14} color="white" />
+                    <Text className="text-white text-sm font-bold">Xác nhận & Giải ngân</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {isOwner && isOpen && (
               <View className="flex-row gap-3">
                 <TouchableOpacity onPress={startEdit}
                   className="flex-1 bg-orange-500 py-3 rounded-2xl items-center flex-row justify-center space-x-2">

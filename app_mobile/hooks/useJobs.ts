@@ -1,17 +1,28 @@
 import { useCallback } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query'
 import { useGiGood } from '../lib/GiGoodContext'
 import * as jobsApi from '../lib/features/jobs/api'
 import {
+  mockAcceptJob,
+  mockCancelJob,
   mockCreateJob,
   mockDeleteJob,
   mockGetJob,
   mockListJobs,
+  mockRefundJob,
+  mockReleaseEscrowJob,
+  mockReportJob,
   mockUpdateJob,
   type MockViewer,
 } from '../lib/features/jobs/mock'
 import type {
   CreateJobBody,
+  JobEscrowResponse,
   JobListParams,
   JobListResponse,
   JobModel,
@@ -27,6 +38,14 @@ export const jobQueryKey = (id: string) => ['job', id] as const
 function toViewer(profile: UserProfile | null): MockViewer {
   if (!profile) return null
   return { id: profile.id, name: profile.name, avatarUrl: profile.avatar || null }
+}
+
+/** Escrow mutations touch the job lists, the detail cache, the wallet and escrows. */
+function invalidateTransactionData(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: ['jobs'] })
+  void queryClient.invalidateQueries({ queryKey: ['job'] })
+  void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+  void queryClient.invalidateQueries({ queryKey: ['escrows'] })
 }
 
 /**
@@ -72,6 +91,43 @@ export function useJobs(params?: JobListParams) {
     },
   })
 
+  // --- task 06 escrow lifecycle ------------------------------------------------
+
+  const acceptMutation = useMutation<JobEscrowResponse, unknown, string>({
+    mutationFn: (id: string) =>
+      USE_MOCK ? Promise.resolve(mockAcceptJob(id, viewer)) : jobsApi.acceptJob(id),
+    onSuccess: () => invalidateTransactionData(queryClient),
+  })
+
+  const reportMutation = useMutation<void, unknown, string>({
+    mutationFn: async (id: string) => {
+      if (USE_MOCK) {
+        mockReportJob(id, viewer)
+        return
+      }
+      await jobsApi.reportJob(id)
+    },
+    onSuccess: () => invalidateTransactionData(queryClient),
+  })
+
+  const releaseMutation = useMutation<JobEscrowResponse, unknown, string>({
+    mutationFn: (id: string) =>
+      USE_MOCK ? Promise.resolve(mockReleaseEscrowJob(id, viewer)) : jobsApi.releaseEscrow(id),
+    onSuccess: () => invalidateTransactionData(queryClient),
+  })
+
+  const cancelMutation = useMutation<JobEscrowResponse | null, unknown, string>({
+    mutationFn: (id: string) =>
+      USE_MOCK ? Promise.resolve(mockCancelJob(id, viewer)) : jobsApi.cancelJob(id),
+    onSuccess: () => invalidateTransactionData(queryClient),
+  })
+
+  const refundMutation = useMutation<JobEscrowResponse, unknown, string>({
+    mutationFn: (id: string) =>
+      USE_MOCK ? Promise.resolve(mockRefundJob(id, viewer)) : jobsApi.refundJob(id),
+    onSuccess: () => invalidateTransactionData(queryClient),
+  })
+
   const uploadImage = useCallback(
     async (localUri: string): Promise<string> =>
       USE_MOCK ? localUri : jobsApi.uploadImage(localUri),
@@ -88,9 +144,19 @@ export function useJobs(params?: JobListParams) {
     createJob: createMutation.mutateAsync,
     updateJob: updateMutation.mutateAsync,
     deleteJob: deleteMutation.mutateAsync,
+    acceptJob: acceptMutation.mutateAsync,
+    reportJob: reportMutation.mutateAsync,
+    releaseEscrow: releaseMutation.mutateAsync,
+    cancelJob: cancelMutation.mutateAsync,
+    refundJob: refundMutation.mutateAsync,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    isAccepting: acceptMutation.isPending,
+    isReporting: reportMutation.isPending,
+    isReleasing: releaseMutation.isPending,
+    isCancelling: cancelMutation.isPending,
+    isRefunding: refundMutation.isPending,
     uploadImage,
   }
 }

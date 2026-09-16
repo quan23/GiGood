@@ -760,6 +760,7 @@ public static class JobsEndpoints
         job.Category,
         job.Price,
         job.Status.ToString(),
+        job.IsCompletedReported,
         job.Lat,
         job.Lng,
         distanceKm,
