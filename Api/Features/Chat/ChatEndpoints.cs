@@ -22,7 +22,7 @@ public static class ChatEndpoints
 
     public static IEndpointRouteBuilder MapChatEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/conversations").RequireAuthorization();
+        var group = app.MapGroup("/api/conversations").RequireAuthorization().WithTags("Chat");
 
         group.MapPost("/", CreateAsync);
         group.MapGet("/", ListAsync);

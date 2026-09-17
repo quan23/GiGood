@@ -19,7 +19,7 @@ public static class AdminEndpoints
 
     public static IEndpointRouteBuilder MapAdminEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/admin").RequireAuthorization("Admin");
+        var group = app.MapGroup("/api/admin").RequireAuthorization("Admin").WithTags("Admin");
 
         group.MapGet("/stats", GetStatsAsync);
         group.MapGet("/users", ListUsersAsync);

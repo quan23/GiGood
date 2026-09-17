@@ -11,7 +11,8 @@ public static class UploadEndpoints
     {
         app.MapPost("/api/upload", UploadAsync)
             .RequireAuthorization()
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithTags("Upload");
 
         return app;
     }

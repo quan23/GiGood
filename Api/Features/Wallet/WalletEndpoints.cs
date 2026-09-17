@@ -17,7 +17,7 @@ public static class WalletEndpoints
 
     public static IEndpointRouteBuilder MapWalletEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/wallet").RequireAuthorization();
+        var group = app.MapGroup("/api/wallet").RequireAuthorization().WithTags("Wallet");
 
         group.MapGet("/balance", GetBalanceAsync);
         group.MapGet("/transactions", ListTransactionsAsync);

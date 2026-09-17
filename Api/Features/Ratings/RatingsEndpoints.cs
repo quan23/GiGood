@@ -17,12 +17,12 @@ public static class RatingsEndpoints
 
     public static IEndpointRouteBuilder MapRatingsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/ratings").RequireAuthorization();
+        var group = app.MapGroup("/api/ratings").RequireAuthorization().WithTags("Ratings");
 
         group.MapPost("/", CreateAsync);
         group.MapGet("/", ListAsync);
 
-        app.MapGet("/api/users/{id:guid}/rating", GetUserRatingAsync).RequireAuthorization();
+        app.MapGet("/api/users/{id:guid}/rating", GetUserRatingAsync).RequireAuthorization().WithTags("Ratings");
 
         return app;
     }

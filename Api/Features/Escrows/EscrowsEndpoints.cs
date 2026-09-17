@@ -9,7 +9,7 @@ public static class EscrowsEndpoints
 {
     public static IEndpointRouteBuilder MapEscrowsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/escrows").RequireAuthorization();
+        var group = app.MapGroup("/api/escrows").RequireAuthorization().WithTags("Escrows");
 
         group.MapGet("/", ListAsync);
 

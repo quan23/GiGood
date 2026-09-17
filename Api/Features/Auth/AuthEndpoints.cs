@@ -19,20 +19,20 @@ public static class AuthEndpoints
 
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/auth");
+        var group = app.MapGroup("/api/auth").WithTags("Auth");
 
         group.MapPost("/register", RegisterAsync);
         group.MapPost("/login", LoginAsync);
         group.MapPost("/refresh", RefreshAsync);
         group.MapPost("/revoke", RevokeAsync); // anonymous: the body carries the refresh token
 
-        app.MapGet("/api/me", GetMeAsync).RequireAuthorization();
+        app.MapGet("/api/me", GetMeAsync).RequireAuthorization().WithTags("Auth");
 
         // Task 08: profile edit, avatar upload, dual-role switch and the KYC stub.
-        app.MapPatch("/api/me", UpdateMeAsync).RequireAuthorization();
-        app.MapPost("/api/me/avatar", UpdateAvatarAsync).RequireAuthorization().DisableAntiforgery();
-        app.MapPost("/api/me/switch-role", SwitchRoleAsync).RequireAuthorization();
-        app.MapPost("/api/me/verify", VerifyAsync).RequireAuthorization();
+        app.MapPatch("/api/me", UpdateMeAsync).RequireAuthorization().WithTags("Auth");
+        app.MapPost("/api/me/avatar", UpdateAvatarAsync).RequireAuthorization().DisableAntiforgery().WithTags("Auth");
+        app.MapPost("/api/me/switch-role", SwitchRoleAsync).RequireAuthorization().WithTags("Auth");
+        app.MapPost("/api/me/verify", VerifyAsync).RequireAuthorization().WithTags("Auth");
 
         return app;
     }

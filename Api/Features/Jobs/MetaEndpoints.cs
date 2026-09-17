@@ -8,7 +8,7 @@ public static class MetaEndpoints
 {
     public static IEndpointRouteBuilder MapMetaEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/meta");
+        var group = app.MapGroup("/api/meta").WithTags("Meta");
 
         group.MapGet("/categories", async (AppDbContext db, CancellationToken ct) =>
         {

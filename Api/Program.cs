@@ -219,7 +219,7 @@ app.MapGet("/health", () => TypedResults.Ok(new
     status = "ok",
     version = "0.0.1",
     time = DateTime.UtcNow,
-}));
+})).WithTags("Health");
 
 // Task 02: /api/jobs CRUD, /api/upload, /api/meta/categories (DB-backed).
 app.MapMetaEndpoints();

@@ -13,7 +13,7 @@ public static class NotificationsEndpoints
 
     public static IEndpointRouteBuilder MapNotificationsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/notifications").RequireAuthorization();
+        var group = app.MapGroup("/api/notifications").RequireAuthorization().WithTags("Notifications");
 
         group.MapGet("/", ListAsync);
         group.MapPost("/mark-read", MarkReadAsync);

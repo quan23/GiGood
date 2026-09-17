@@ -23,7 +23,7 @@ public static class JobsEndpoints
 
     public static IEndpointRouteBuilder MapJobsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/jobs").RequireAuthorization();
+        var group = app.MapGroup("/api/jobs").RequireAuthorization().WithTags("Jobs");
 
         group.MapGet("/", ListAsync);
         group.MapPost("/", CreateAsync);
