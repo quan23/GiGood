@@ -3,6 +3,7 @@ import { FontAwesome } from "@expo/vector-icons";
 import type { JobModel } from "@/lib/features/jobs/types";
 import { CATEGORY_META } from "@/lib/categories";
 import { formatVnd } from "@/lib/format";
+import { colors } from "@/constants/theme";
 import { StatusBadge } from "./StatusBadge";
 
 interface Props {
@@ -35,7 +36,7 @@ export function JobCard({ job, onPress, onLongPress, selected, showActions, acti
         <FontAwesome
           name={(meta?.icon || "wrench") as keyof typeof FontAwesome.glyphMap}
           size={11}
-          color="#9ca3af"
+          color={colors.grayMuted}
         />
         <Text className="text-sm text-gray-500 ml-1.5">{meta?.label ?? job.category}</Text>
         {job.distanceKm != null && (
@@ -43,7 +44,7 @@ export function JobCard({ job, onPress, onLongPress, selected, showActions, acti
         )}
       </View>
       <Text className="text-sm text-gray-500 mb-1" numberOfLines={1}>
-        <FontAwesome name="map-marker" size={11} color="#9ca3af" />{" "}
+        <FontAwesome name="map-marker" size={11} color={colors.grayMuted} />{" "}
         {job.locationText || "Chưa có địa chỉ"}
       </Text>
       <View className="flex-row items-center justify-between mt-2">

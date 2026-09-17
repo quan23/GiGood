@@ -4,8 +4,9 @@ import { useRouter } from 'expo-router'
 import { useAuth } from '../../../hooks/useAuth'
 import { useJobs } from '../../../hooks/useJobs'
 import { JobCard } from '../../../components/ui/JobCard'
+import { SkeletonList } from '../../../components/ui/SkeletonCard'
 import { EmptyState } from '../../../components/shared/EmptyState'
-import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
+import { colors } from '../../../constants/theme'
 
 export default function JobsScreen() {
   const { profile } = useAuth()
@@ -18,7 +19,7 @@ export default function JobsScreen() {
   )
 
   if (loading) {
-    return <LoadingSpinner text="Đang tải việc của bạn..." />
+    return <SkeletonList />
   }
 
   return (
@@ -27,7 +28,7 @@ export default function JobsScreen() {
       data={myJobs}
       keyExtractor={item => item.id}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor="#ea580c" />
+        <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor={colors.orange} />
       }
       ListHeaderComponent={
         <View className="px-4 mb-2">
@@ -37,7 +38,7 @@ export default function JobsScreen() {
       }
       ListEmptyComponent={
         <EmptyState
-          icon="📋"
+          icon="📭"
           title="Bạn chưa có việc nào"
           subtitle="Hãy đăng việc mới để Tasker phù hợp nhận giúp bạn."
         />

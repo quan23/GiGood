@@ -144,6 +144,8 @@ export function JobMap({
               activeOpacity={0.8}
               onPress={() => onSelectJob?.(job.id)}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`${CATEGORY_META[job.category]?.label ?? job.category}: ${job.title}`}
               className="absolute items-center justify-center"
               style={{
                 left: asPercent(left),
@@ -202,6 +204,8 @@ export function JobMap({
         onPress={(event) =>
           handlePick(event.nativeEvent.locationX, event.nativeEvent.locationY)
         }
+        accessibilityRole="button"
+        accessibilityLabel="Chạm để chọn vị trí trên bản đồ"
         className={containerClass}
         style={{ height }}
       >

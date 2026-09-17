@@ -4,7 +4,7 @@ import { useChat, type ChatConversation } from '../../../hooks/useChat'
 import { resolveImageUrl } from '../../../lib/features/jobs/api'
 import { formatChatTime } from '../../../lib/features/chat/format'
 import { EmptyState } from '../../../components/shared/EmptyState'
-import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
+import { SkeletonList } from '../../../components/ui/SkeletonCard'
 
 function ConversationRow({ item, onPress }: { item: ChatConversation; onPress: () => void }) {
   const avatar = resolveImageUrl(item.peerAvatar)
@@ -58,11 +58,11 @@ export default function ChatScreen() {
         <Text className="font-bold text-sm text-gray-800">Tin nhắn</Text>
       </View>
       {conversationsLoading ? (
-        <LoadingSpinner text="Đang tải cuộc trò chuyện..." />
+        <SkeletonList count={4} />
       ) : conversations.length === 0 ? (
         <EmptyState
           icon="📭"
-          title="Chưa có cuộc trò chuyện"
+          title="Chưa có cuộc trò chuyện nào"
           subtitle="Khi có Tasker nhận việc, bạn có thể chat tại đây."
         />
       ) : (

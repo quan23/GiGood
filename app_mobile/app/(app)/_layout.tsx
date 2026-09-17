@@ -14,6 +14,7 @@ import { connectChatHub } from "../../lib/features/chat/hub";
 import { connectNotificationHub } from "../../lib/features/notifications/hub";
 import { formatNotificationTime } from "../../lib/features/notifications/format";
 import { formatVnd } from "../../lib/format";
+import { colors } from "../../constants/theme";
 
 export default function AppLayout() {
   const { profile, currentRole, switchRole } = useAuth();
@@ -87,9 +88,13 @@ export default function AppLayout() {
           <View className="flex-row items-center space-x-2">
             <TouchableOpacity
               onPress={toggleNotif}
+              accessibilityRole="button"
+              accessibilityLabel={
+                unreadCount > 0 ? `Thông báo, ${unreadCount} chưa đọc` : "Thông báo"
+              }
               className="w-9 h-9 rounded-xl bg-stone-50 border border-gray-200 items-center justify-center relative"
             >
-              <FontAwesome name="bell" size={14} color="#6b7280" />
+              <FontAwesome name="bell" size={14} color={colors.grayIcon} />
               {unreadCount > 0 && (
                 <View className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-orange-500 rounded-full items-center justify-center">
                   <Text className="text-white text-[8px] font-bold">
@@ -98,7 +103,11 @@ export default function AppLayout() {
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push("/(app)/profile")}>
+            <TouchableOpacity
+              onPress={() => router.push("/(app)/profile")}
+              accessibilityRole="button"
+              accessibilityLabel="Hồ sơ của tôi"
+            >
               <Image
                 source={{ uri: profile.avatar }}
                 className="w-9 h-9 rounded-xl border border-gray-200"
@@ -116,14 +125,14 @@ export default function AppLayout() {
             ]}
             selected={currentRole}
             onSelect={(value) => void handleRoleChange(value as Role)}
-            activeColor={isSeeker ? "#ea580c" : "#0f766e"}
+            activeColor={isSeeker ? colors.orange : colors.teal}
           />
         </View>
 
         {/* Wallet + Escrow cards */}
         <View className="flex-row gap-2 mt-3">
           <View className="flex-1 flex-row items-center space-x-2 bg-teal-50 border border-teal-200 px-3 py-2 rounded-xl">
-            <FontAwesome name="shield" size={14} color="#0f766e" />
+            <FontAwesome name="shield" size={14} color={colors.teal} />
             <View>
               <Text className="text-[9px] text-gray-500 font-medium">
                 Ký quỹ an toàn
@@ -134,7 +143,7 @@ export default function AppLayout() {
             </View>
           </View>
           <View className="flex-1 flex-row items-center space-x-2 bg-stone-50 border border-gray-200 px-3 py-2 rounded-xl">
-            <FontAwesome name="credit-card" size={14} color="#6b7280" />
+            <FontAwesome name="credit-card" size={14} color={colors.grayIcon} />
             <View>
               <Text className="text-[9px] text-gray-500 font-medium">
                 Ví của {profile.name.split(" ").pop()}
@@ -190,7 +199,7 @@ export default function AppLayout() {
                       <FontAwesome
                         name="bell"
                         size={10}
-                        color={n.read ? "#9ca3af" : "#ea580c"}
+                        color={n.read ? colors.grayMuted : colors.orange}
                       />
                     </View>
                     <View className="flex-1">

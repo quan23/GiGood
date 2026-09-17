@@ -5,6 +5,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -22,6 +24,7 @@ import { getApiErrorMessage } from "../../lib/features/jobs/api";
 import { useProfile } from "../../lib/features/profile/hooks/useProfile";
 import type { ProfileUpdate } from "../../lib/features/profile/types";
 import { formatVnd } from "../../lib/format";
+import { colors } from "../../constants/theme";
 import type { Availability, Category, Vehicle } from "../../types";
 
 type PickerKind = "availability" | "vehicle";
@@ -66,7 +69,7 @@ export default function ProfileScreen() {
 
   const isSeeker = p.role === "seeker";
   const tp = p.taskerProfile;
-  const accent = isSeeker ? "#ea580c" : "#0f766e";
+  const accent = isSeeker ? colors.orange : colors.teal;
 
   const toggleSkill = (skill: Category) => {
     setSkills((prev) =>
@@ -159,22 +162,29 @@ export default function ProfileScreen() {
           onPress={() => router.back()}
           className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center"
         >
-          <FontAwesome name="arrow-left" size={14} color="#6b7280" />
+          <FontAwesome name="arrow-left" size={14} color={colors.grayIcon} />
         </TouchableOpacity>
         <Text className="font-bold text-base text-gray-800">Hồ sơ của tôi</Text>
       </View>
 
-      <ScrollView
-        className="flex-1 px-5 py-6"
-        contentContainerStyle={{ paddingBottom: 32 }}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
+        <ScrollView
+          className="flex-1 px-5 py-6"
+          contentContainerStyle={{ paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Avatar + identity */}
         <View className="items-center mb-5">
           <TouchableOpacity
             onPress={pickAvatar}
             disabled={isUploadingAvatar}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Đổi ảnh đại diện"
           >
             <Image
               source={{ uri: p.avatar }}
@@ -193,9 +203,9 @@ export default function ProfileScreen() {
               }`}
             >
               {isUploadingAvatar ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <FontAwesome name="camera" size={10} color="#ffffff" />
+                <FontAwesome name="camera" size={10} color={colors.white} />
               )}
             </View>
           </TouchableOpacity>
@@ -285,7 +295,7 @@ export default function ProfileScreen() {
                     <FontAwesome
                       name={meta.icon as keyof typeof FontAwesome.glyphMap}
                       size={11}
-                      color={active ? "#0f766e" : "#9ca3af"}
+                      color={active ? colors.teal : colors.grayMuted}
                     />
                     <Text
                       className={`text-[11px] font-bold ${
@@ -323,7 +333,7 @@ export default function ProfileScreen() {
                   ? AVAILABILITY_LABEL[availability]
                   : "Chọn thời gian rảnh"}
               </Text>
-              <FontAwesome name="chevron-down" size={12} color="#9ca3af" />
+              <FontAwesome name="chevron-down" size={12} color={colors.grayMuted} />
             </TouchableOpacity>
           </View>
 
@@ -338,7 +348,7 @@ export default function ProfileScreen() {
               >
                 {vehicle ? VEHICLE_LABEL[vehicle] : "Chọn phương tiện di chuyển"}
               </Text>
-              <FontAwesome name="chevron-down" size={12} color="#9ca3af" />
+              <FontAwesome name="chevron-down" size={12} color={colors.grayMuted} />
             </TouchableOpacity>
           </View>
 
@@ -358,10 +368,10 @@ export default function ProfileScreen() {
           } ${isSeeker ? "bg-orange-500" : "bg-teal-600"}`}
         >
           {isSaving ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
-              <FontAwesome name="save" size={12} color="#ffffff" />
+              <FontAwesome name="save" size={12} color={colors.white} />
               <Text className="text-white text-sm font-bold">Lưu thay đổi</Text>
             </>
           )}
@@ -370,7 +380,7 @@ export default function ProfileScreen() {
         {/* Identity verification */}
         <View className="bg-stone-50 border border-gray-200 rounded-2xl p-3.5 flex-row items-center justify-between mb-5">
           <View className="flex-row items-center space-x-2.5">
-            <FontAwesome name="id-card" size={14} color="#9ca3af" />
+            <FontAwesome name="id-card" size={14} color={colors.grayMuted} />
             <Text className="text-xs font-bold text-gray-700">
               Xác thực danh tính
             </Text>
@@ -384,10 +394,11 @@ export default function ProfileScreen() {
           onPress={() => void signOut()}
           className="w-full bg-red-50 py-3.5 rounded-2xl flex-row items-center justify-center space-x-2"
         >
-          <FontAwesome name="sign-out" size={12} color="#ef4444" />
+          <FontAwesome name="sign-out" size={12} color={colors.red} />
           <Text className="text-red-500 text-sm font-bold">Đăng xuất</Text>
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <ModalSheet
         visible={picker === "availability"}

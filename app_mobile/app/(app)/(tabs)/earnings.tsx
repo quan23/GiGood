@@ -6,6 +6,8 @@ import { useJobs } from '../../../hooks/useJobs'
 import { useEscrows, useWallet } from '../../../hooks/useWallet'
 import { formatVnd } from '../../../lib/format'
 import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
+import { EmptyState } from '../../../components/shared/EmptyState'
+import { colors } from '../../../constants/theme'
 
 function formatDate(iso: string): string {
   const date = new Date(iso)
@@ -58,7 +60,7 @@ export default function EarningsScreen() {
       className="flex-1 px-4 py-4"
       contentContainerStyle={{ paddingBottom: 24 }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#0f766e" />
+        <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={colors.teal} />
       }
     >
       <Text className="text-lg font-extrabold text-gray-800 mb-4">Thu nhập của bạn</Text>
@@ -67,12 +69,12 @@ export default function EarningsScreen() {
       <View className="bg-teal-600 rounded-2xl p-4 mb-4">
         <View className="flex-row items-center justify-between">
           <Text className="text-teal-100 text-[11px] font-bold">Số dư khả dụng</Text>
-          <FontAwesome name="credit-card" size={14} color="#99f6e4" />
+          <FontAwesome name="credit-card" size={14} color={colors.tealSoft} />
         </View>
         <Text className="text-white text-2xl font-extrabold mt-1">{formatVnd(balance)}</Text>
         <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-teal-500">
           <Text className="text-teal-100 text-[11px] font-bold">
-            <FontAwesome name="shield" size={10} color="#99f6e4" /> Đang giữ ký quỹ
+            <FontAwesome name="shield" size={10} color={colors.tealSoft} /> Đang giữ ký quỹ
           </Text>
           <Text className="text-teal-50 text-xs font-extrabold">{formatVnd(escrowHeld)}</Text>
         </View>
@@ -81,12 +83,12 @@ export default function EarningsScreen() {
       {/* Stat cards */}
       <View className="flex-row gap-3 mb-4">
         <View className="flex-1 bg-white border border-gray-200 rounded-2xl p-3.5">
-          <FontAwesome name="money" size={14} color="#0f766e" style={{ marginBottom: 6 }} />
+          <FontAwesome name="money" size={14} color={colors.teal} style={{ marginBottom: 6 }} />
           <Text className="text-base font-extrabold text-gray-800">{formatVnd(totalEarnings)}</Text>
           <Text className="text-[10px] text-gray-400 font-medium">Tổng thu nhập</Text>
         </View>
         <View className="flex-1 bg-white border border-gray-200 rounded-2xl p-3.5">
-          <FontAwesome name="check-circle" size={14} color="#ea580c" style={{ marginBottom: 6 }} />
+          <FontAwesome name="check-circle" size={14} color={colors.orange} style={{ marginBottom: 6 }} />
           <Text className="text-base font-extrabold text-gray-800">{myReleasedEscrows.length}</Text>
           <Text className="text-[10px] text-gray-400 font-medium">Việc hoàn thành</Text>
         </View>
@@ -95,7 +97,11 @@ export default function EarningsScreen() {
       <View>
         <Text className="font-bold text-sm text-gray-800 mb-2">Lịch sử nhận tiền</Text>
         {releaseTransactions.length === 0 ? (
-          <Text className="text-xs text-gray-400 text-center py-8">Chưa có lịch sử nhận tiền nào.</Text>
+          <EmptyState
+            icon="📭"
+            title="Chưa có giao dịch nào"
+            subtitle="Thu nhập từ các việc đã giải ngân sẽ hiện ở đây."
+          />
         ) : (
           releaseTransactions.map(transaction => (
             <View key={transaction.id} className="bg-white border border-gray-200 rounded-2xl p-3.5 flex-row items-center justify-between mb-2.5">

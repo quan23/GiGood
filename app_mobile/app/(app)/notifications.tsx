@@ -3,9 +3,10 @@ import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { EmptyState } from '../../components/shared/EmptyState'
-import { LoadingSpinner } from '../../components/shared/LoadingSpinner'
+import { SkeletonList } from '../../components/ui/SkeletonCard'
 import { NotificationTile } from '../../components/ui/NotificationTile'
 import { useNotifications } from '../../hooks/useNotifications'
+import { colors } from '../../constants/theme'
 import type { AppNotification } from '../../lib/features/notifications/types'
 
 export default function NotificationsScreen() {
@@ -33,9 +34,11 @@ export default function NotificationsScreen() {
       <View className="bg-white border-b border-gray-200 px-4 py-3 flex-row items-center">
         <TouchableOpacity
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
           className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center"
         >
-          <FontAwesome name="arrow-left" size={14} color="#6b7280" />
+          <FontAwesome name="arrow-left" size={14} color={colors.grayIcon} />
         </TouchableOpacity>
         <Text className="font-bold text-base text-gray-800 ml-3 flex-1">Thông báo</Text>
         {unreadCount > 0 && (
@@ -64,7 +67,7 @@ export default function NotificationsScreen() {
       )}
 
       {loading ? (
-        <LoadingSpinner text="Đang tải thông báo..." />
+        <SkeletonList />
       ) : (
         <FlatList
           data={notifications}
@@ -78,8 +81,8 @@ export default function NotificationsScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="🔔"
-              title="Không có thông báo"
+              icon="📭"
+              title="Chưa có thông báo nào"
               subtitle="Bạn sẽ nhận thông báo khi có việc mới"
             />
           }
@@ -91,7 +94,7 @@ export default function NotificationsScreen() {
                 className="py-3 items-center"
               >
                 {loadingMore ? (
-                  <ActivityIndicator size="small" color="#9ca3af" />
+                  <ActivityIndicator size="small" color={colors.grayMuted} />
                 ) : (
                   <Text className="text-xs text-gray-400">Tải thêm thông báo</Text>
                 )}

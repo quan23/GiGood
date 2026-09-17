@@ -1,9 +1,20 @@
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert } from 'react-native'
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Image,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
 import { useGiGood } from '../../lib/GiGoodContext'
+import { colors } from '../../constants/theme'
 import { useState } from 'react'
 import { Category, Availability, Vehicle } from '../../types'
 import { CATEGORY_META, AVAILABILITY_LABEL, VEHICLE_LABEL } from '../../lib/categories'
@@ -54,8 +65,13 @@ export default function SignupTaskerProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="px-5 pb-4 flex-row items-center space-x-3 border-b border-gray-200">
-        <TouchableOpacity onPress={() => router.back()} className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center">
-          <FontAwesome name="arrow-left" size={14} color="#6b7280" />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
+          className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center"
+        >
+          <FontAwesome name="arrow-left" size={14} color={colors.grayIcon} />
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="font-bold text-base text-gray-800">Hồ sơ năng lực Tasker</Text>
@@ -63,14 +79,22 @@ export default function SignupTaskerProfileScreen() {
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-5 py-6">
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          className="flex-1 px-5 py-6"
+          contentContainerStyle={{ paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="flex-row space-x-1.5 mb-5">
           <View className="h-1.5 rounded-full flex-1 bg-teal-600" />
           <View className="h-1.5 rounded-full flex-1 bg-teal-600" />
         </View>
 
         <View className="bg-teal-50 border border-teal-100 rounded-2xl p-3.5 flex-row items-start space-x-2.5 mb-5">
-          <FontAwesome name="info-circle" size={14} color="#0f766e" style={{ marginTop: 2 }} />
+          <FontAwesome name="info-circle" size={14} color={colors.teal} style={{ marginTop: 2 }} />
           <Text className="text-[11px] text-teal-800 leading-relaxed flex-1">
             Hồ sơ này giúp hệ thống AI gợi ý đúng việc phù hợp với bạn, và giúp Seeker tin tưởng chọn bạn hơn.
           </Text>
@@ -96,8 +120,8 @@ export default function SignupTaskerProfileScreen() {
                 return (
                   <TouchableOpacity key={sk.key} onPress={() => toggleSkill(sk.key)}
                     className="flex-row items-center space-x-2 p-3 rounded-xl border-2 border-gray-200 mb-2.5 mr-2.5"
-                    style={active ? { borderColor: '#0f766e', backgroundColor: '#f0fdfa' } : undefined}>
-                    <FontAwesome name={sk.icon} size={14} color={active ? '#0f766e' : '#9ca3af'} />
+                    style={active ? { borderColor: colors.teal, backgroundColor: colors.tealLight } : undefined}>
+                    <FontAwesome name={sk.icon} size={14} color={active ? colors.teal : colors.grayMuted} />
                     <Text className={`text-xs font-bold ${active ? 'text-teal-600' : 'text-gray-700'}`}>
                       {CATEGORY_META[sk.key].label}
                     </Text>
@@ -110,7 +134,7 @@ export default function SignupTaskerProfileScreen() {
           <View className="space-y-1.5">
             <Text className="text-xs font-bold text-gray-700">Giới thiệu ngắn về bạn</Text>
             <TextInput value={bio} onChangeText={setBio} placeholder="VD: Mình có 2 năm kinh nghiệm sửa chữa điện nước..."
-              placeholderTextColor="#9ca3af" multiline numberOfLines={3}
+              placeholderTextColor={colors.grayMuted} multiline numberOfLines={3}
               className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm" style={{ minHeight: 80, textAlignVertical: 'top' }} />
           </View>
 
@@ -119,14 +143,14 @@ export default function SignupTaskerProfileScreen() {
             <TouchableOpacity onPress={() => setShowAvailability(!showAvailability)}
               className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 flex-row items-center justify-between bg-white">
               <Text className="text-sm text-gray-700">{AVAILABILITY_LABEL[availability as keyof typeof AVAILABILITY_LABEL]}</Text>
-              <FontAwesome name="chevron-down" size={12} color="#9ca3af" />
+              <FontAwesome name="chevron-down" size={12} color={colors.grayMuted} />
             </TouchableOpacity>
             {showAvailability && (
               <View className="border border-gray-200 rounded-2xl overflow-hidden">
                 {(Object.entries(AVAILABILITY_LABEL) as [string, string][]).map(([key, label]) => (
                   <TouchableOpacity key={key} onPress={() => { setAvailability(key as Availability); setShowAvailability(false) }}
                     className="px-4 py-3 border-b border-gray-100"
-                    style={availability === key ? { backgroundColor: '#f0fdfa' } : undefined}>
+                    style={availability === key ? { backgroundColor: colors.tealLight } : undefined}>
                     <Text className={`text-sm ${availability === key ? 'text-teal-600 font-bold' : 'text-gray-700'}`}>{label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -139,14 +163,14 @@ export default function SignupTaskerProfileScreen() {
             <TouchableOpacity onPress={() => setShowVehicle(!showVehicle)}
               className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 flex-row items-center justify-between bg-white">
               <Text className="text-sm text-gray-700">{VEHICLE_LABEL[vehicle as keyof typeof VEHICLE_LABEL]}</Text>
-              <FontAwesome name="chevron-down" size={12} color="#9ca3af" />
+              <FontAwesome name="chevron-down" size={12} color={colors.grayMuted} />
             </TouchableOpacity>
             {showVehicle && (
               <View className="border border-gray-200 rounded-2xl overflow-hidden">
                 {(Object.entries(VEHICLE_LABEL) as [string, string][]).map(([key, label]) => (
                   <TouchableOpacity key={key} onPress={() => { setVehicle(key as Vehicle); setShowVehicle(false) }}
                     className="px-4 py-3 border-b border-gray-100"
-                    style={vehicle === key ? { backgroundColor: '#f0fdfa' } : undefined}>
+                    style={vehicle === key ? { backgroundColor: colors.tealLight } : undefined}>
                     <Text className={`text-sm ${vehicle === key ? 'text-teal-600 font-bold' : 'text-gray-700'}`}>{label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -155,7 +179,7 @@ export default function SignupTaskerProfileScreen() {
           </View>
 
           <View className="bg-stone-50 border border-gray-200 rounded-2xl p-3.5 flex-row items-start space-x-2.5">
-            <FontAwesome name="id-card" size={14} color="#9ca3af" style={{ marginTop: 2 }} />
+            <FontAwesome name="id-card" size={14} color={colors.grayMuted} style={{ marginTop: 2 }} />
             <View className="flex-1">
               <Text className="text-xs font-bold text-gray-700">Xác thực danh tính (CCCD)</Text>
               <Text className="text-[10px] text-gray-400 mt-0.5">Có thể bổ sung sau trong phần Hồ sơ.</Text>
@@ -169,7 +193,8 @@ export default function SignupTaskerProfileScreen() {
             <Text className="text-white text-sm font-bold">Hoàn tất hồ sơ & bắt đầu nhận việc</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }

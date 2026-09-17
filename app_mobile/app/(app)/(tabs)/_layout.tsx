@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router'
 import { FontAwesome } from '@expo/vector-icons'
 import { useAuth } from '../../../hooks/useAuth'
+import { colors } from '../../../constants/theme'
 
 type Role = 'seeker' | 'tasker'
 
@@ -17,17 +18,17 @@ const ALL_TABS: { name: string; label: string; icon: React.ComponentProps<typeof
 export default function TabLayout() {
   const { currentRole } = useAuth()
   const isSeeker = currentRole === 'seeker'
-  const activeColor = isSeeker ? '#ea580c' : '#0f766e'
+  const activeColor = isSeeker ? colors.orange : colors.teal
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: activeColor,
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarInactiveTintColor: colors.grayMuted,
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: '#e7e5e4',
+          backgroundColor: colors.white,
+          borderTopColor: colors.stoneBorder,
           paddingBottom: 10,
           height: 60,
         },

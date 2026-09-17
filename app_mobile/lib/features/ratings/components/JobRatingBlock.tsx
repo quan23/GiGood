@@ -2,6 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useJobRatings } from '../../../../hooks/useRatings'
+import { colors } from '../../../../constants/theme'
 
 interface Props {
   jobId: string
@@ -18,7 +19,7 @@ function ReadOnlyStars({ value, size = 11 }: { value: number; size?: number }) {
           key={star}
           name="star"
           size={size}
-          color={star <= value ? '#f59e0b' : '#d1d5db'}
+          color={star <= value ? colors.amber : colors.grayDisabled}
         />
       ))}
     </View>

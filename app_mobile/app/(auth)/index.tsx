@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
+import { colors } from '../../constants/theme'
 
 const FEATURES = [
   { icon: 'shield' as const, text: 'Thanh toán ký quỹ an toàn, chỉ giải ngân khi xong việc' },
@@ -56,7 +57,7 @@ export default function WelcomeScreen() {
                 className="w-full bg-white py-3.5 rounded-2xl items-center justify-center flex-row space-x-2 active:opacity-90"
               >
                 <Text className="font-bold text-sm text-orange-500">Bắt đầu ngay</Text>
-                <FontAwesome name="arrow-right" size={12} color="#ea580c" />
+                <FontAwesome name="arrow-right" size={12} color={colors.orange} />
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => router.push('/(auth)/login')} className="py-2 items-center">

@@ -12,6 +12,7 @@ import { StarRow } from '../../../../components/ui/StarRow'
 import { useCreateRating } from '../../../../hooks/useRatings'
 import { useUi } from '../../../../hooks/useUi'
 import { getApiErrorMessage } from '../../jobs/api'
+import { colors } from '../../../../constants/theme'
 import type { Review } from '../types'
 
 interface Props {
@@ -97,7 +98,7 @@ export function RatingSheet({ visible, onClose, jobId, revieweeName, onSubmitted
             value={comment}
             onChangeText={setComment}
             placeholder="Chia sẻ trải nghiệm của bạn (không bắt buộc)"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.grayMuted}
             multiline
             numberOfLines={3}
             editable={!submitted && !isSubmitting}

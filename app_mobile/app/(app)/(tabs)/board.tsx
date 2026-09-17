@@ -7,12 +7,13 @@ import { useDeviceLocation } from '../../../hooks/useDeviceLocation'
 import { useJobs } from '../../../hooks/useJobs'
 import { useUi } from '../../../hooks/useUi'
 import { JobCard } from '../../../components/ui/JobCard'
+import { SkeletonList } from '../../../components/ui/SkeletonCard'
 import { EmptyState } from '../../../components/shared/EmptyState'
-import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
 import { JobMap } from '../../../lib/features/jobs/components/JobMap'
 import { DEFAULT_RADIUS_KM, Q1_CENTER } from '../../../lib/features/jobs/geo'
 import { getApiErrorMessage } from '../../../lib/features/jobs/api'
 import { useCart } from '../../../lib/features/wallet/context/CartContext'
+import { colors } from '../../../constants/theme'
 import type { JobModel } from '../../../lib/features/jobs/types'
 
 export default function BoardScreen() {
@@ -137,7 +138,7 @@ export default function BoardScreen() {
   }, [acceptJob, checkingOut, exitSelection, has, jobs, profile, releaseEscrow, showToast])
 
   if (loading) {
-    return <LoadingSpinner text="Đang tải việc gần bạn..." />
+    return <SkeletonList />
   }
 
   return (
@@ -149,7 +150,7 @@ export default function BoardScreen() {
         data={jobs}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor="#0f766e" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor={colors.teal} />
         }
         onScrollToIndexFailed={(info) =>
           listRef.current?.scrollToOffset({
@@ -185,9 +186,9 @@ export default function BoardScreen() {
         }
         ListEmptyComponent={
           <EmptyState
-            icon="🗺️"
-            title="Chưa có việc nào gần bạn"
-            subtitle="Hãy quay lại sau hoặc làm mới danh sách."
+            icon="📭"
+            title="Hiện chưa có việc mới"
+            subtitle="Hãy quay lại sau hoặc kéo xuống để làm mới danh sách."
           />
         }
         renderItem={({ item }) => (
@@ -210,7 +211,7 @@ export default function BoardScreen() {
       {selectionMode && (
         <View className="absolute bottom-4 left-4 right-4 bg-gray-900 rounded-2xl px-4 py-3 flex-row items-center shadow-lg">
           <View className="flex-row items-center space-x-2 flex-1">
-            <FontAwesome name="check-square-o" size={14} color="#fdba74" />
+            <FontAwesome name="check-square-o" size={14} color={colors.orangeBorder} />
             <Text className="text-white text-xs font-bold">Đã chọn {count}</Text>
           </View>
           <TouchableOpacity onPress={exitSelection} className="px-3 py-2 rounded-xl mr-1">

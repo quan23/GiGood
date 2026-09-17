@@ -1,8 +1,19 @@
-import { View, Text, TouchableOpacity, ScrollView, Image, TextInput, Alert } from 'react-native'
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
+import { colors } from '../../constants/theme'
 import { useState } from 'react'
 
 export default function LoginScreen() {
@@ -32,13 +43,26 @@ export default function LoginScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="px-5 pb-4 flex-row items-center space-x-3 border-b border-gray-200">
-        <TouchableOpacity onPress={() => router.back()} className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center">
-          <FontAwesome name="arrow-left" size={14} color="#6b7280" />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
+          className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center"
+        >
+          <FontAwesome name="arrow-left" size={14} color={colors.grayIcon} />
         </TouchableOpacity>
         <Text className="font-bold text-base text-gray-800">Đăng nhập</Text>
       </View>
 
-      <ScrollView className="flex-1 px-5 py-6">
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          className="flex-1 px-5 py-6"
+          contentContainerStyle={{ paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="mb-6">
           <Text className="text-2xl font-extrabold text-gray-800">Chào mừng trở lại</Text>
           <Text className="text-xs text-gray-500 mt-1">Đăng nhập bằng số điện thoại hoặc dùng tài khoản mẫu để xem demo ngay.</Text>
@@ -49,9 +73,9 @@ export default function LoginScreen() {
             <Text className="text-xs font-bold text-gray-700">Số điện thoại</Text>
             <View className="relative">
               <View className="absolute left-4 top-0 bottom-0 justify-center z-10">
-                <FontAwesome name="phone" size={12} color="#9ca3af" />
+                <FontAwesome name="phone" size={12} color={colors.grayMuted} />
               </View>
-              <TextInput value={phone} onChangeText={setPhone} placeholder="09xx xxx xxx" placeholderTextColor="#9ca3af"
+              <TextInput value={phone} onChangeText={setPhone} placeholder="09xx xxx xxx" placeholderTextColor={colors.grayMuted}
                 className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-gray-200 text-sm" keyboardType="phone-pad" />
             </View>
           </View>
@@ -59,9 +83,9 @@ export default function LoginScreen() {
             <Text className="text-xs font-bold text-gray-700">Mật khẩu</Text>
             <View className="relative">
               <View className="absolute left-4 top-0 bottom-0 justify-center z-10">
-                <FontAwesome name="lock" size={12} color="#9ca3af" />
+                <FontAwesome name="lock" size={12} color={colors.grayMuted} />
               </View>
-              <TextInput value={password} onChangeText={setPassword} placeholder="Nhập mật khẩu" placeholderTextColor="#9ca3af"
+              <TextInput value={password} onChangeText={setPassword} placeholder="Nhập mật khẩu" placeholderTextColor={colors.grayMuted}
                 className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-gray-200 text-sm" secureTextEntry />
             </View>
           </View>
@@ -101,7 +125,8 @@ export default function LoginScreen() {
           Chưa có tài khoản?{' '}
           <Text onPress={() => router.push('/(auth)/role-select')} className="text-orange-500 font-bold">Đăng ký ngay</Text>
         </Text>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }

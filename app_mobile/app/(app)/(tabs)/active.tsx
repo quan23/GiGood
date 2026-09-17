@@ -18,6 +18,8 @@ import { formatVnd } from '../../../lib/format'
 import { CATEGORY_META } from '../../../lib/categories'
 import { getApiErrorMessage } from '../../../lib/features/jobs/api'
 import { RatingSheet } from '../../../lib/features/ratings/components/RatingSheet'
+import { EmptyState } from '../../../components/shared/EmptyState'
+import { colors } from '../../../constants/theme'
 import type { JobModel } from '../../../lib/features/jobs/types'
 
 export default function ActiveScreen() {
@@ -77,13 +79,17 @@ export default function ActiveScreen() {
       className="flex-1 px-4 py-4"
       contentContainerStyle={{ paddingBottom: 24 }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor="#0f766e" />
+        <RefreshControl refreshing={refreshing} onRefresh={() => void refetch()} tintColor={colors.teal} />
       }
     >
       <Text className="text-lg font-extrabold text-gray-800 mb-4">Việc đã nhận</Text>
 
       {assignedJobs.length === 0 ? (
-        <Text className="text-xs text-gray-400 text-center py-8">{'Bạn chưa nhận việc nào. Vào "Bảng việc" để xem các việc gần bạn!'}</Text>
+        <EmptyState
+          icon="📭"
+          title="Chưa có việc đang làm"
+          subtitle={'Vào "Bảng việc" để xem các việc gần bạn!'}
+        />
       ) : (
         assignedJobs.map(job => {
           const meta = CATEGORY_META[job.category]
@@ -93,7 +99,7 @@ export default function ActiveScreen() {
             <View key={job.id} className="bg-white border border-gray-200 rounded-2xl p-3.5 space-y-2.5 mb-3">
               <View className="flex-row items-center space-x-2">
                 <View className="w-8 h-8 rounded-lg bg-teal-50 items-center justify-center">
-                  <FontAwesome name={(meta?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={12} color="#0f766e" />
+                  <FontAwesome name={(meta?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={12} color={colors.teal} />
                 </View>
                 <View className="flex-1 min-w-0">
                   <Text className="font-bold text-xs text-gray-800 leading-tight">{job.title}</Text>
@@ -102,7 +108,7 @@ export default function ActiveScreen() {
                 <Text className="font-bold text-xs text-teal-600 flex-shrink-0">{formatVnd(job.price)}</Text>
               </View>
               <Text className="text-[11px] text-gray-500">
-                <FontAwesome name="map-marker" size={10} color="#9ca3af" /> {job.locationText || 'Chưa có địa chỉ'}
+                <FontAwesome name="map-marker" size={10} color={colors.grayMuted} /> {job.locationText || 'Chưa có địa chỉ'}
               </Text>
               <View className="flex-row gap-2">
                 <TouchableOpacity onPress={() => void handleOpenChat(job)}

@@ -1,3 +1,5 @@
+const vndFormatter = new Intl.NumberFormat('vi-VN')
+
 export function formatVnd(num: number): string {
-  return num.toLocaleString('vi-VN') + ' VND'
+  return `${vndFormatter.format(num)} VND`
 }

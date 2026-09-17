@@ -39,3 +39,14 @@ export function SkeletonCard() {
     </View>
   );
 }
+
+/** First-load placeholder for list screens (board / jobs / chat / notifications). */
+export function SkeletonList({ count = 3, className = "" }: { count?: number; className?: string }) {
+  return (
+    <View className={`pt-4 ${className}`} accessibilityLabel="Đang tải nội dung">
+      {Array.from({ length: count }, (_, index) => (
+        <SkeletonCard key={index} />
+      ))}
+    </View>
+  );
+}

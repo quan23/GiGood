@@ -20,6 +20,7 @@ import { useChat, type ChatMessage } from '../../../hooks/useChat'
 import { useAuth } from '../../../hooks/useAuth'
 import { useUi } from '../../../hooks/useUi'
 import { getApiErrorMessage, resolveImageUrl } from '../../../lib/features/jobs/api'
+import { colors } from '../../../constants/theme'
 
 export default function ChatDetailScreen() {
   const { id, jobId: jobIdParam } = useLocalSearchParams<{ id?: string; jobId?: string }>()
@@ -87,9 +88,11 @@ export default function ChatDetailScreen() {
       <View className="px-3 py-3 border-b border-gray-200 flex-row items-center bg-white">
         <TouchableOpacity
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
           className="w-8 h-8 rounded-full bg-stone-100 items-center justify-center"
         >
-          <FontAwesome name="arrow-left" size={12} color="#6b7280" />
+          <FontAwesome name="arrow-left" size={12} color={colors.grayIcon} />
         </TouchableOpacity>
         {avatar ? (
           <Image source={{ uri: avatar }} className="w-9 h-9 rounded-full border border-gray-200 ml-2.5" />
@@ -133,7 +136,7 @@ export default function ChatDetailScreen() {
                 className="py-3 items-center"
               >
                 {loadingMore ? (
-                  <ActivityIndicator size="small" color="#9ca3af" />
+                  <ActivityIndicator size="small" color={colors.grayMuted} />
                 ) : (
                   <Text className="text-xs text-gray-400">Tải tin nhắn cũ hơn</Text>
                 )}
@@ -172,14 +175,17 @@ export default function ChatDetailScreen() {
             setText(value)
             notifyTyping(value.trim().length > 0)
           }}
+          accessibilityLabel="Nội dung tin nhắn"
           placeholder="Nhập tin nhắn..."
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.grayMuted}
           className="flex-1 bg-gray-100 rounded-full px-4 py-2 mr-2 text-gray-800 text-xs"
           multiline
         />
         <TouchableOpacity
           onPress={handleSend}
           disabled={!text.trim() || isSending}
+          accessibilityRole="button"
+          accessibilityLabel="Gửi tin nhắn"
           className={`rounded-full w-10 h-10 items-center justify-center ${
             accent === 'orange' ? 'bg-orange-500' : 'bg-teal-600'
           } ${!text.trim() || isSending ? 'opacity-60' : ''}`}

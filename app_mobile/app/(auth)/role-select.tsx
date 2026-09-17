@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAuth } from '../../hooks/useAuth'
+import { colors } from '../../constants/theme'
 
 export default function RoleSelectScreen() {
   const router = useRouter()
@@ -16,8 +17,13 @@ export default function RoleSelectScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="px-5 pb-4 flex-row items-center space-x-3 border-b border-gray-200">
-        <TouchableOpacity onPress={() => router.back()} className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center">
-          <FontAwesome name="arrow-left" size={14} color="#6b7280" />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
+          className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center"
+        >
+          <FontAwesome name="arrow-left" size={14} color={colors.grayIcon} />
         </TouchableOpacity>
         <Text className="font-bold text-base text-gray-800">Tạo tài khoản</Text>
       </View>
@@ -31,25 +37,25 @@ export default function RoleSelectScreen() {
         <TouchableOpacity onPress={() => selectRole('seeker')}
           className="flex-row items-start space-x-3 p-4 rounded-2xl border-2 border-gray-200 bg-white">
           <View className="w-12 h-12 rounded-xl bg-orange-50 items-center justify-center">
-            <FontAwesome name="user" size={18} color="#ea580c" />
+            <FontAwesome name="user" size={18} color={colors.orange} />
           </View>
           <View className="flex-1">
             <Text className="font-bold text-sm text-gray-800">Tôi cần thuê người làm việc</Text>
             <Text className="text-xs text-gray-500 mt-0.5">Đăng việc vặt, tìm Tasker gần bạn và thanh toán an toàn</Text>
           </View>
-          <FontAwesome name="chevron-right" size={12} color="#d1d5db" style={{ marginTop: 12 }} />
+          <FontAwesome name="chevron-right" size={12} color={colors.grayDisabled} style={{ marginTop: 12 }} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => selectRole('tasker')}
           className="flex-row items-start space-x-3 p-4 rounded-2xl border-2 border-gray-200 bg-white">
           <View className="w-12 h-12 rounded-xl bg-teal-50 items-center justify-center">
-            <FontAwesome name="wrench" size={18} color="#0f766e" />
+            <FontAwesome name="wrench" size={18} color={colors.teal} />
           </View>
           <View className="flex-1">
             <Text className="font-bold text-sm text-gray-800">Tôi muốn nhận việc, kiếm thêm thu nhập</Text>
             <Text className="text-xs text-gray-500 mt-0.5">Tạo hồ sơ kỹ năng, nhận việc phù hợp gần khu vực của bạn</Text>
           </View>
-          <FontAwesome name="chevron-right" size={12} color="#d1d5db" style={{ marginTop: 12 }} />
+          <FontAwesome name="chevron-right" size={12} color={colors.grayDisabled} style={{ marginTop: 12 }} />
         </TouchableOpacity>
 
         <Text className="text-center text-xs text-gray-500 pt-2">

@@ -1,5 +1,6 @@
 import { View, Text } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
+import { colors } from '@/constants/theme'
 
 type Props = {
   icon: keyof typeof FontAwesome.glyphMap
@@ -10,7 +11,7 @@ type Props = {
   borderColor?: string
 }
 
-export function IconPill({ icon, label, value, bgColor = 'bg-teal-50', iconColor = '#0f766e', borderColor = 'border-teal-200' }: Props) {
+export function IconPill({ icon, label, value, bgColor = 'bg-teal-50', iconColor = colors.teal, borderColor = 'border-teal-200' }: Props) {
   return (
     <View className={`flex-row items-center space-x-2 ${bgColor} border ${borderColor} px-3 py-2 rounded-xl`}>
       <FontAwesome name={icon} size={14} color={iconColor} />

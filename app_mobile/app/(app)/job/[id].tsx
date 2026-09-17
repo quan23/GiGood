@@ -24,6 +24,7 @@ import { EmptyState } from '../../../components/shared/EmptyState'
 import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
 import { RatingSheet } from '../../../lib/features/ratings/components/RatingSheet'
 import { getApiErrorMessage, resolveImageUrl } from '../../../lib/features/jobs/api'
+import { colors } from '../../../constants/theme'
 import type { Category } from '../../../types'
 
 function formatDate(iso: string): string {
@@ -279,8 +280,13 @@ export default function JobDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-stone-50">
         <View className="bg-white border-b border-gray-200 px-4 py-3 flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center">
-            <FontAwesome name="arrow-left" size={14} color="#6b7280" />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
+            className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center"
+          >
+            <FontAwesome name="arrow-left" size={14} color={colors.grayIcon} />
           </TouchableOpacity>
           <Text className="font-bold text-sm text-gray-800 ml-3">Chi tiết công việc</Text>
         </View>
@@ -296,8 +302,13 @@ export default function JobDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-stone-50">
       <View className="bg-white border-b border-gray-200 px-4 py-3 flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center">
-          <FontAwesome name="arrow-left" size={14} color="#6b7280" />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
+          className="w-9 h-9 rounded-full bg-stone-100 items-center justify-center"
+        >
+          <FontAwesome name="arrow-left" size={14} color={colors.grayIcon} />
         </TouchableOpacity>
         <Text className="font-bold text-sm text-gray-800">Chi tiết công việc</Text>
         <StatusBadge status={job.status} />
@@ -322,7 +333,7 @@ export default function JobDetailScreen() {
             <View className="space-y-1.5">
               <Text className="text-xs font-bold text-gray-700">Tên công việc <Text className="text-red-500">*</Text></Text>
               <TextInput value={title} onChangeText={setTitle}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.grayMuted}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm bg-white" />
             </View>
 
@@ -332,7 +343,7 @@ export default function JobDetailScreen() {
                 {catEntries.map(([key, meta]) => (
                   <TouchableOpacity key={key} onPress={() => setCategory(key)}
                     className="px-3 py-2 rounded-xl border border-gray-200 bg-white"
-                    style={category === key ? { backgroundColor: '#fff7ed', borderColor: '#fdba74' } : undefined}>
+                    style={category === key ? { backgroundColor: colors.orangeSoft, borderColor: colors.orangeBorder } : undefined}>
                     <Text className={`text-xs font-bold ${category === key ? 'text-orange-500' : 'text-gray-600'}`}>{meta.label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -342,7 +353,7 @@ export default function JobDetailScreen() {
             <View className="space-y-1.5">
               <Text className="text-xs font-bold text-gray-700">Mô tả công việc <Text className="text-red-500">*</Text></Text>
               <TextInput value={description} onChangeText={setDescription} multiline numberOfLines={3}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.grayMuted}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm bg-white"
                 style={{ minHeight: 80, textAlignVertical: 'top' }} />
             </View>
@@ -350,14 +361,14 @@ export default function JobDetailScreen() {
             <View className="space-y-1.5">
               <Text className="text-xs font-bold text-gray-700">Mức giá đề xuất <Text className="text-red-500">*</Text></Text>
               <TextInput value={price} onChangeText={setPrice} keyboardType="number-pad"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.grayMuted}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm bg-white" />
             </View>
 
             <View className="space-y-1.5">
               <Text className="text-xs font-bold text-gray-700">Địa điểm thực hiện</Text>
               <TextInput value={location} onChangeText={setLocation}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.grayMuted}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm bg-white" />
             </View>
 
@@ -385,7 +396,7 @@ export default function JobDetailScreen() {
               </View>
               <View className="flex-row items-center mt-2">
                 <View className="flex-row items-center bg-orange-50 px-2.5 py-1 rounded-full mr-2">
-                  <FontAwesome name={(CATEGORY_META[job.category]?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={10} color="#ea580c" />
+                  <FontAwesome name={(CATEGORY_META[job.category]?.icon || 'wrench') as keyof typeof FontAwesome.glyphMap} size={10} color={colors.orange} />
                   <Text className="text-[10px] font-bold text-orange-500 ml-1.5">{CATEGORY_META[job.category]?.label ?? job.category}</Text>
                 </View>
                 <Text className="text-[11px] text-gray-400">Đăng ngày {formatDate(job.createdAt)}</Text>
@@ -397,11 +408,11 @@ export default function JobDetailScreen() {
               <Text className="text-xs text-gray-500 leading-relaxed">{job.description}</Text>
               <View className="border-t border-gray-50 pt-2.5">
                 <Text className="text-[11px] text-gray-500">
-                  <FontAwesome name="map-marker" size={10} color="#9ca3af" /> {job.locationText || 'Chưa có địa chỉ'}
+                  <FontAwesome name="map-marker" size={10} color={colors.grayMuted} /> {job.locationText || 'Chưa có địa chỉ'}
                 </Text>
                 {job.distanceKm != null && (
                   <Text className="text-[11px] text-gray-400 mt-1">
-                    <FontAwesome name="location-arrow" size={10} color="#9ca3af" /> Cách bạn {job.distanceKm} km
+                    <FontAwesome name="location-arrow" size={10} color={colors.grayMuted} /> Cách bạn {job.distanceKm} km
                   </Text>
                 )}
               </View>
@@ -481,10 +492,10 @@ export default function JobDetailScreen() {
                 <TouchableOpacity onPress={handleRefund} disabled={isRefunding}
                   className={`bg-red-50 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isRefunding ? 'opacity-60' : ''}`}>
                   {isRefunding ? (
-                    <ActivityIndicator color="#ef4444" />
+                    <ActivityIndicator color={colors.red} />
                   ) : (
                     <>
-                      <FontAwesome name="undo" size={12} color="#ef4444" />
+                      <FontAwesome name="undo" size={12} color={colors.red} />
                       <Text className="text-red-500 text-sm font-bold">Huỷ nhận việc</Text>
                     </>
                   )}
@@ -496,10 +507,10 @@ export default function JobDetailScreen() {
               <TouchableOpacity onPress={handleCancel} disabled={isCancelling}
                 className={`bg-red-50 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isCancelling ? 'opacity-60' : ''}`}>
                 {isCancelling ? (
-                  <ActivityIndicator color="#ef4444" />
+                  <ActivityIndicator color={colors.red} />
                 ) : (
                   <>
-                    <FontAwesome name="ban" size={12} color="#ef4444" />
+                    <FontAwesome name="ban" size={12} color={colors.red} />
                     <Text className="text-red-500 text-sm font-bold">Huỷ việc</Text>
                   </>
                 )}
@@ -530,10 +541,10 @@ export default function JobDetailScreen() {
                 <TouchableOpacity onPress={handleDelete} disabled={isDeleting}
                   className={`flex-1 bg-red-50 py-3 rounded-2xl items-center flex-row justify-center space-x-2 ${isDeleting ? 'opacity-60' : ''}`}>
                   {isDeleting ? (
-                    <ActivityIndicator color="#ef4444" />
+                    <ActivityIndicator color={colors.red} />
                   ) : (
                     <>
-                      <FontAwesome name="trash" size={12} color="#ef4444" />
+                      <FontAwesome name="trash" size={12} color={colors.red} />
                       <Text className="text-red-500 text-sm font-bold">Xoá</Text>
                     </>
                   )}

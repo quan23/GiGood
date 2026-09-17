@@ -18,6 +18,7 @@ import { JobRatingBlock } from '../../../lib/features/ratings/components/JobRati
 import { RatingSheet } from '../../../lib/features/ratings/components/RatingSheet'
 import { LoadingSpinner } from '../../../components/shared/LoadingSpinner'
 import { EmptyState } from '../../../components/shared/EmptyState'
+import { colors } from '../../../constants/theme'
 import type { JobModel } from '../../../lib/features/jobs/types'
 
 export default function HistoryScreen() {
@@ -108,9 +109,9 @@ export default function HistoryScreen() {
   return (
     <ScrollView
       className="flex-1 px-4 py-4"
-      contentContainerStyle={{ paddingBottom: 24 }}
+      contentContainerStyle={{ paddingBottom: 32 }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#ea580c" />
+        <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={colors.orange} />
       }
     >
       <Text className="text-lg font-extrabold text-gray-800 mb-4">Lịch sử giao dịch</Text>
@@ -139,12 +140,16 @@ export default function HistoryScreen() {
 
       {!hasRows ? (
         <EmptyState
-          icon="🧾"
-          title="Chưa có giao dịch nào hoàn tất"
+          icon="📭"
+          title="Chưa có việc nào hoàn thành"
           subtitle="Các công việc đã hoàn thành sẽ xuất hiện ở đây."
         />
       ) : doneJobs.length === 0 ? (
-        <Text className="text-xs text-gray-400 text-center py-8">Chưa có công việc nào hoàn tất.</Text>
+        <EmptyState
+          icon="📭"
+          title="Chưa có việc nào hoàn thành"
+          subtitle="Các công việc đã hoàn thành sẽ xuất hiện ở đây."
+        />
       ) : (
         doneJobs.map(job => {
           const isOwner = job.owner.id === profile?.id
