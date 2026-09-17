@@ -1,0 +1,19 @@
+# Prod-like local run of the API image, layered on top of deploy/compose.yml:
+#   docker compose -f deploy/compose.yml -f deploy/compose.prod.yml --profile offline up --build
+#
+# ConnectionStrings__Default and Jwt__Key are read from the shell environment (or
+# deploy/.env, auto-loaded for interpolation); nothing secret is committed.
+# The !reset/!override tags require Docker Compose >= 2.24.
+services:
+  api:
+    build: ../Api
+    ports: !override
+      - "8080:8080"
+    env_file: !reset []
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: ${ConnectionStrings__Default:-}
+      Jwt__Key: ${Jwt__Key:-}
+    depends_on:
+      - db

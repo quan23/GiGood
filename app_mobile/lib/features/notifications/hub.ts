@@ -5,10 +5,8 @@ import {
 } from '@microsoft/signalr'
 import type { QueryClient } from '@tanstack/react-query'
 import { getAccessToken } from '../../core/storage/secure-store'
+import { API_BASE_URL, USE_MOCK } from '../../core/config/env'
 import type { AppNotification, NotificationListResponse } from './types'
-
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/+$/, '')
 
 export type NewNotificationHandler = (notification: AppNotification) => void
 

@@ -3,6 +3,10 @@ services:
     name: gigood-api
     env: docker
     dockerfilePath: Api/Dockerfile
+    # The Dockerfile COPYs Api.csproj from the context root, so the context must
+    # be Api/ (same as deploy/compose.yml `build: ../Api`), not the repo root.
+    dockerContext: Api
+    plan: free
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:$PORT
@@ -14,8 +18,11 @@ services:
         value: GiGood
       - key: Jwt__Audience
         value: GiGoodMobile
+      # Set to the static site origin (e.g. https://gigood-web.onrender.com) or
+      # the browser blocks the admin app's calls (Program.cs CORS policy).
+      - key: Cors__WebOrigin
+        sync: false
 
-  # Static site; web/ is created in task 12, so this fails until then (expected).
   - type: web
     name: gigood-web
     env: static

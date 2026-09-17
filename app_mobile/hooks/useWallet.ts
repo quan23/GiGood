@@ -7,6 +7,7 @@ import {
   type QueryClient,
 } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
+import { USE_MOCK } from '../lib/core/config/env'
 import * as walletApi from '../lib/features/wallet/api'
 import {
   mockGetBalance,
@@ -21,8 +22,6 @@ import type {
   WalletBalance,
   WalletTransactionListResponse,
 } from '../lib/features/wallet/types'
-
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
 
 export const walletQueryKey = ['wallet'] as const
 export const walletTransactionsQueryKey = ['wallet', 'transactions'] as const

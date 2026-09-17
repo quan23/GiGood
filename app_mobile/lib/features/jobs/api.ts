@@ -1,5 +1,6 @@
 import type { AxiosError } from 'axios'
 import apiClient from '../../core/api/client'
+import { API_BASE_URL } from '../../core/config/env'
 import type {
   CreateJobBody,
   JobEscrowResponse,
@@ -9,8 +10,6 @@ import type {
   UpdateJobBody,
   UploadResponse,
 } from './types'
-
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/+$/, '')
 
 export async function listJobs(params: JobListParams = {}): Promise<JobListResponse> {
   const { data } = await apiClient.get<JobListResponse>('/api/jobs', { params })

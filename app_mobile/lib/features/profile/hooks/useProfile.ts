@@ -3,11 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useGiGood } from '../../../GiGoodContext'
 import { toUserProfile } from '../../auth/types'
 import { resolveImageUrl } from '../../jobs/api'
+import { USE_MOCK } from '../../../core/config/env'
 import * as profileApi from '../api'
 import { profileQueryKey, type ProfileUpdate } from '../types'
 import type { UserProfile } from '../../../../types'
-
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
 
 /** Applies a `PATCH /api/me` body onto the cached profile for the offline demo. */
 function mergeProfile(current: UserProfile, body: ProfileUpdate): UserProfile {

@@ -4,10 +4,8 @@ import {
   HubConnectionState,
 } from '@microsoft/signalr'
 import { getAccessToken } from '../../core/storage/secure-store'
+import { API_BASE_URL, USE_MOCK } from '../../core/config/env'
 import type { MessageDto, TypingEventDto } from './types'
-
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/+$/, '')
 
 export type ReceiveMessageHandler = (message: MessageDto) => void
 export type TypingHandler = (event: TypingEventDto) => void

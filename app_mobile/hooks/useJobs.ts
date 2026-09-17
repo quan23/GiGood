@@ -6,6 +6,7 @@ import {
   type QueryClient,
 } from '@tanstack/react-query'
 import { useGiGood } from '../lib/GiGoodContext'
+import { USE_MOCK } from '../lib/core/config/env'
 import * as jobsApi from '../lib/features/jobs/api'
 import {
   mockAcceptJob,
@@ -29,8 +30,6 @@ import type {
   UpdateJobBody,
 } from '../lib/features/jobs/types'
 import type { UserProfile } from '../types'
-
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
 
 export const jobsQueryKey = (params?: JobListParams) => ['jobs', params ?? {}] as const
 export const jobQueryKey = (id: string) => ['job', id] as const

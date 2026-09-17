@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query'
 import { useGiGood } from '../lib/GiGoodContext'
 import { useAuth } from './useAuth'
+import { USE_MOCK } from '../lib/core/config/env'
 import * as chatApi from '../lib/features/chat/api'
 import {
   connectChatHub,
@@ -22,7 +23,6 @@ import type {
 } from '../lib/features/chat/types'
 import type { Job, Role } from '../types'
 
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
 const TYPING_CLEAR_MS = 3000
 const TYPING_STOP_MS = 2000
 

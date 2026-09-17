@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
+import { USE_MOCK } from '../lib/core/config/env'
 import * as notificationsApi from '../lib/features/notifications/api'
 import {
   connectNotificationHub,
@@ -14,8 +15,6 @@ import {
   mockMarkNotificationsRead,
 } from '../lib/features/notifications/mock'
 import type { NotificationListResponse } from '../lib/features/notifications/types'
-
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
 
 /**
  * Notifications data source (task 05): React Query list + the foreground

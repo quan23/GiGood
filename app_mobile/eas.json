@@ -1,0 +1,20 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://gigood-api.onrender.com",
+        "EXPO_PUBLIC_USE_MOCK": "0"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  }
+}

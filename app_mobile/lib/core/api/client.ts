@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import { API_BASE_URL } from '../config/env'
 import {
   clearTokens,
   getAccessToken,
@@ -29,7 +30,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
 }
 
 export const apiClient = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 15000,
 })
 

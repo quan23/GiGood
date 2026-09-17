@@ -16,8 +16,7 @@ import {
   getRefreshToken,
   setTokens,
 } from '../lib/core/storage/secure-store'
-
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === '1'
+import { USE_MOCK } from '../lib/core/config/env'
 
 const DEMO_ACCOUNTS: Record<Role, { phone: string; password: string }> = {
   seeker: { phone: '0901234567', password: '123456' },
