@@ -1,5 +1,6 @@
 using System.Text;
 using Api.Data;
+using Api.Features.Admin;
 using Api.Features.Auth;
 using Api.Features.Chat;
 using Api.Features.Escrows;
@@ -78,7 +79,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Task 12a: /api/admin surface. JwtProvider emits `is_admin: "true"` for IsAdmin users.
+    options.AddPolicy("Admin", policy => policy.RequireClaim("is_admin", "true"));
+});
 
 // ---------------------------------------------------------------------------
 // Auth slice (task 01) — BCrypt hashing, JWT issuing, FluentValidation rules.
@@ -116,6 +121,12 @@ builder.Services.AddSingleton<IValidator<TopUpRequest>, TopUpRequestValidator>()
 // ---------------------------------------------------------------------------
 builder.Services.AddSingleton<IValidator<CreateRatingRequest>, CreateRatingRequestValidator>();
 builder.Services.AddScoped<ReviewService>();
+
+// ---------------------------------------------------------------------------
+// Admin slice (task 12a) — shared release/refund escrow ledger used by both the
+// job endpoints and /api/admin/escrows/{id}/release|refund.
+// ---------------------------------------------------------------------------
+builder.Services.AddScoped<EscrowLedgerService>();
 
 // ---------------------------------------------------------------------------
 // SignalR (in-box). Hubs are mapped below.
@@ -221,6 +232,9 @@ app.MapEscrowsEndpoints();
 
 // Task 07: /api/ratings + /api/users/{id}/rating.
 app.MapRatingsEndpoints();
+
+// Task 12a: /api/admin/* (Admin policy — is_admin claim).
+app.MapAdminEndpoints();
 
 // Task 01: /api/auth/* + /api/me.
 app.MapAuthEndpoints();

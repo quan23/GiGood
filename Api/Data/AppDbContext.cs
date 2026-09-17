@@ -79,6 +79,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasIndex(j => j.Category);
             entity.HasIndex(j => j.CreatedAt);
             entity.HasIndex(j => new { j.Lat, j.Lng }); // bbox prefilter (task 03)
+            entity.HasIndex(j => j.Hidden);             // task 12a: public list excludes hidden jobs
         });
 
         modelBuilder.Entity<JobImage>(entity =>

@@ -111,7 +111,7 @@ public static class AuthEndpoints
             new AuthResponse(ToDto(user), accessToken, rawRefresh, expiresIn));
     }
 
-    private static async Task<Results<Ok<TokenPair>, ProblemHttpResult>> LoginAsync(
+    private static async Task<Results<Ok<TokenPair>, ProblemHttpResult, JsonHttpResult<ErrorResponse>>> LoginAsync(
         LoginRequest request,
         IValidator<LoginRequest> validator,
         AppDbContext db,
@@ -131,6 +131,12 @@ public static class AuthEndpoints
             return TypedResults.Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidCredentials);
         }
 
+        // Task 12a: banned accounts cannot log in.
+        if (user.Banned)
+        {
+            return TypedResults.Json(new ErrorResponse("Tài khoản đã bị khoá."), statusCode: StatusCodes.Status403Forbidden);
+        }
+
         var (accessToken, expiresIn) = jwt.CreateAccessToken(user);
         var (rawRefresh, refreshToken) = CreateRefreshToken(user.Id);
 
@@ -140,7 +146,7 @@ public static class AuthEndpoints
         return TypedResults.Ok(new TokenPair(accessToken, rawRefresh, expiresIn));
     }
 
-    private static async Task<Results<Ok<TokenPair>, ValidationProblem, ProblemHttpResult>> RefreshAsync(
+    private static async Task<Results<Ok<TokenPair>, ValidationProblem, ProblemHttpResult, JsonHttpResult<ErrorResponse>>> RefreshAsync(
         TokenRequest request,
         IValidator<TokenRequest> validator,
         AppDbContext db,
@@ -164,6 +170,12 @@ public static class AuthEndpoints
         if (user is null)
         {
             return InvalidSession();
+        }
+
+        // Task 12a: banned accounts cannot rotate their session either.
+        if (user.Banned)
+        {
+            return TypedResults.Json(new ErrorResponse("Tài khoản đã bị khoá."), statusCode: StatusCodes.Status403Forbidden);
         }
 
         // Rotate-on-use: revoke the presented token and hand out a fresh pair.
@@ -399,7 +411,8 @@ public static class AuthEndpoints
         user.RatingAvg,
         user.CurrentRole,
         ToTaskerProfileDto(user),
-        user.CreatedAt);
+        user.CreatedAt,
+        user.IsAdmin);
 
     private static TaskerProfileDto? ToTaskerProfileDto(User user)
     {

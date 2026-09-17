@@ -53,6 +53,20 @@ public static class DevSeed
                 seeded = true;
             }
 
+            // Task 12a: web admin account (seeded only when the phone is missing).
+            if (!await db.Users.AnyAsync(u => u.Phone == "0900000000"))
+            {
+                db.Users.Add(new User
+                {
+                    Phone = "0900000000",
+                    Name = "Quản trị viên",
+                    PasswordHash = hasher.Hash(DemoPassword),
+                    CurrentRole = "seeker",
+                    IsAdmin = true,
+                });
+                seeded = true;
+            }
+
             if (seeded)
             {
                 await db.SaveChangesAsync();

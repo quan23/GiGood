@@ -32,7 +32,8 @@ public sealed record UserDto(
     double RatingAvg,
     string CurrentRole,
     TaskerProfileDto? TaskerProfile,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool IsAdmin);
 
 public sealed record TaskerProfileDto(List<string> Skills, string Bio, string Availability, string Vehicle, bool Verified);
 

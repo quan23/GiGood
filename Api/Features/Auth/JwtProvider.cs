@@ -30,6 +30,20 @@ public sealed class JwtProvider
 
     public (string AccessToken, int ExpiresIn) CreateAccessToken(User user)
     {
+        var claims = new Dictionary<string, object>
+        {
+            ["sub"] = user.Id.ToString(),
+            ["jti"] = Guid.NewGuid().ToString(),
+            ["phone"] = user.Phone,
+            ["role"] = user.CurrentRole,
+        };
+
+        // Task 12a: drives the "Admin" authorization policy.
+        if (user.IsAdmin)
+        {
+            claims["is_admin"] = "true";
+        }
+
         var descriptor = new SecurityTokenDescriptor
         {
             Issuer = _issuer,
@@ -37,13 +51,7 @@ public sealed class JwtProvider
             IssuedAt = DateTime.UtcNow,
             Expires = DateTime.UtcNow.Add(AccessTokenLifetime),
             SigningCredentials = _credentials,
-            Claims = new Dictionary<string, object>
-            {
-                ["sub"] = user.Id.ToString(),
-                ["jti"] = Guid.NewGuid().ToString(),
-                ["phone"] = user.Phone,
-                ["role"] = user.CurrentRole,
-            },
+            Claims = claims,
         };
 
         return (_handler.CreateToken(descriptor), (int)AccessTokenLifetime.TotalSeconds);

@@ -23,6 +23,8 @@ public class Job
     public decimal Price { get; set; }
     public JobStatus Status { get; set; } = JobStatus.Open;
     public bool IsCompletedReported { get; set; }
+    // Task 12a: admin-hidden jobs are excluded from the public list.
+    public bool Hidden { get; set; }
     public double? Lat { get; set; }
     public double? Lng { get; set; }
     public string? LocationText { get; set; }
